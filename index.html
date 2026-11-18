@@ -177,6 +177,16 @@
   }
   .form-group small { display: block; color: var(--muted); margin-top: 5px; font-size: 0.78rem; }
 
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 12px;
+  }
+  .form-row-2 .form-group { margin-bottom: 16px; }
+  @media (max-width: 520px) {
+    .form-row-2 { grid-template-columns: 1fr; gap: 0; }
+  }
+
   /* ====== BUTTONS ====== */
   .btn {
     padding: 10px 18px;
@@ -401,7 +411,7 @@
   .mt-16 { margin-top: 16px; }
   .hidden { display: none !important; }
 
-  /* ====== MODAL ====== */
+  /* ====== MODAL (FIXED) ====== */
   .modal-backdrop {
     position: fixed; inset: 0;
     background: rgba(15,23,42,0.55);
@@ -433,7 +443,6 @@
     border-bottom: 1px solid var(--border);
     background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
     flex-shrink: 0;
-    position: sticky; top: 0; z-index: 2;
   }
   .modal-header h3 { font-size: 1.05rem; color: var(--primary-dark); font-weight: 800; letter-spacing: -0.2px; }
   .modal-close {
@@ -446,22 +455,36 @@
     transition: all 0.15s;
   }
   .modal-close:hover { background: #fff; color: var(--text); transform: rotate(90deg); }
-  .modal-body { padding: 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+
+  /* PENTING: form di dalam modal juga flex column agar footer selalu tampil */
+  .modal > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .modal-body {
+    padding: 22px 22px 20px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .modal-footer {
     display: flex; gap: 10px; justify-content: flex-end;
     padding: 16px 22px;
     border-top: 1px solid var(--border);
     background: #f8fafc;
     flex-shrink: 0;
-    position: sticky; bottom: 0; z-index: 2;
   }
 
   /* ====== CHECKLIST ====== */
   .checklist {
     border: 1.5px solid var(--border);
     border-radius: var(--radius-sm);
-    max-height: 260px;
-    overflow-y: auto;
     background: #fff;
   }
   .checklist-item {
@@ -498,18 +521,17 @@
   .kelas-preview-box .label-row { font-weight: 700; margin-bottom: 5px; color: var(--primary-dark); }
   .kelas-preview-box .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
 
-  /* ====== STICKY SEARCH (panel absensi / edit kegiatan) ====== */
+  /* ====== STICKY SEARCH (modal kegiatan) ====== */
   .kegiatan-search-sticky {
     position: sticky;
     top: 0;
     z-index: 3;
     background: #fff;
-    padding-bottom: 8px;
-    margin-bottom: 6px;
+    padding: 8px 0 8px;
+    margin: 0 0 6px;
     border-bottom: 1px solid var(--border);
   }
   .kegiatan-search-sticky .search-row { margin-bottom: 8px; }
-  #kegiatanPesertaChecklist { max-height: 340px; overflow-y: auto; }
 
   /* ====== DAFTAR SCAN SESI ====== */
   .scan-recent-list {
@@ -673,6 +695,7 @@
     color: var(--muted);
     font-family: 'JetBrains Mono', monospace;
   }
+  .rekap-list-item .status-group { margin-left: 6px; }
   .rekap-list-empty {
     padding: 20px;
     text-align: center;
@@ -681,6 +704,37 @@
     font-size: 0.88rem;
   }
   .rekap-export-bar { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* ====== STATUS H/I/P/S/A ====== */
+  .status-group { display: flex; gap: 4px; }
+  .status-btn {
+    width: 30px; height: 28px;
+    border: 1.5px solid var(--border);
+    background: #fff;
+    border-radius: 7px;
+    font-size: 0.78rem; font-weight: 800;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0;
+    font-family: inherit;
+  }
+  .status-btn:hover { border-color: var(--primary-light); transform: translateY(-1px); }
+  .status-btn.active-H { background: #d1fae5; border-color: #10b981; color: #065f46; }
+  .status-btn.active-I { background: #dbeafe; border-color: #3b82f6; color: #1e40af; }
+  .status-btn.active-P { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+  .status-btn.active-S { background: #fce7f3; border-color: #ec4899; color: #9d174d; }
+  .status-btn.active-A { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+  .status-badge {
+    display: inline-block; padding: 2px 9px; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 800;
+  }
+  .status-badge.H { background: #d1fae5; color: #065f46; }
+  .status-badge.I { background: #dbeafe; color: #1e40af; }
+  .status-badge.P { background: #fef3c7; color: #92400e; }
+  .status-badge.S { background: #fce7f3; color: #9d174d; }
+  .status-badge.A { background: #fee2e2; color: #991b1b; }
 
   /* ====== LOADING OVERLAY ====== */
   .loading-overlay {
@@ -713,8 +767,8 @@
     .tab-btn { font-size: 0.82rem; padding: 10px 8px; min-width: 80px; }
     table { font-size: 0.8rem; } th, td { padding: 9px 8px; }
     .bulk-bar .bulk-info { width: 100%; }
-    .modal { border-radius: 14px; }
-    .modal-body { padding: 16px; }
+    .modal { border-radius: 14px; max-height: 92vh; }
+    .modal-body { padding: 16px 14px 16px; }
     .modal-header, .modal-footer { padding: 14px 16px; }
     .rekap-cards { grid-template-columns: 1fr; }
     .kegiatan-cards { grid-template-columns: 1fr; }
@@ -859,16 +913,20 @@
     <div class="modal-header"><h3 id="modalKegiatanTitle">✏️ Edit Kegiatan</h3><button class="modal-close" id="modalKegiatanClose">×</button></div>
     <form id="formEditKegiatan">
       <div class="modal-body">
-        <div class="form-group"><label for="editKegiatanNama">Nama Kegiatan</label><input type="text" id="editKegiatanNama" required autocomplete="off"></div>
-        <div class="form-group">
-          <label for="editKegiatanTanggal">📅 Tanggal Kegiatan</label>
-          <input type="date" id="editKegiatanTanggal" required>
-          <small>Tanggal pelaksanaan kegiatan.</small>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="editKegiatanNama">Nama Kegiatan</label>
+            <input type="text" id="editKegiatanNama" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="editKegiatanTanggal">📅 Tanggal</label>
+            <input type="date" id="editKegiatanTanggal" required>
+          </div>
         </div>
+
         <div class="form-group">
           <label>Peserta yang WAJIB Ikut</label>
 
-          <!-- STICKY: hanya search + filter kelas -->
           <div class="kegiatan-search-sticky">
             <div class="search-row">
               <div class="form-group" style="margin-bottom:0;">
@@ -885,8 +943,7 @@
             </div>
           </div>
 
-          <!-- SCROLL: hanya daftar peserta -->
-          <div class="checklist" id="kegiatanPesertaChecklist" style="max-height:340px;overflow-y:auto;">
+          <div class="checklist" id="kegiatanPesertaChecklist">
             <div class="empty">Belum ada peserta.</div>
           </div>
         </div>
@@ -974,7 +1031,6 @@
       </div>
       <div class="scan-status" id="scanStatus"></div>
 
-      <!-- Daftar scan sesi -->
       <div class="scan-recent-list" id="scanRecentList">
         <h4>📋 Daftar Scan Sesi Ini (0)</h4>
         <div id="scanRecentBody" class="rekap-list-empty">Belum ada scan.</div>
@@ -1020,6 +1076,15 @@
         <div class="rekap-export-bar">
           <button type="button" class="btn btn-danger btn-sm" id="btnDownloadTidak">⬇️ Download Belum Hadir (CSV)</button>
         </div>
+      </div>
+
+      <div class="rekap-detail-section">
+        <h4>👥 Semua Peserta Wajib <span class="count-badge" id="rdAllCount">0</span></h4>
+        <div class="info-box" style="margin-bottom:10px;">
+          Klik tombol <b>H</b> (Hadir), <b>I</b> (Izin), <b>P</b> (Pulang), <b>S</b> (Sakit), <b>A</b> (Absen) untuk mengubah status peserta.
+          Klik status yang sama lagi untuk menghapus status.
+        </div>
+        <div class="rekap-list" id="rdAllList" style="max-height:360px;"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1081,6 +1146,9 @@
   let rekapDetailKegiatanId = null;
   let rekapDetailTanggal = 'all';
 
+  const STATUS_LABELS = { H: 'Hadir', I: 'Izin', P: 'Pulang', S: 'Sakit', A: 'Absen' };
+  const STATUS_ORDER = ['H', 'I', 'P', 'S', 'A'];
+
   const STORAGE_KEY = 'qr_kehadiran_data_v26';
 
   let html5QrCode = null;
@@ -1090,7 +1158,6 @@
   let cameras = [];
   let currentCameraIndex = 0;
 
-  // Daftar scan SESI (tampil di modal scan)
   let scanSessionLog = [];
 
   // Firebase sync state
@@ -1223,6 +1290,41 @@
   }
   function isHariIni(tgl) { return tgl === todayISO(); }
 
+  // ====== STATUS H/I/P/S/A ======
+  function getStatusPeserta(p, kegiatanId, tanggal) {
+    const k = findKegiatanById(kegiatanId);
+    if (!k || !p) return '';
+    if (tanggal === 'all') {
+      let found = '';
+      Object.keys(p.kehadiran || {}).forEach(key => {
+        const [kid] = key.split('|');
+        if (sameId(kid, kegiatanId)) {
+          const s = (p.kehadiran[key] || {}).status || ((p.kehadiran[key] || {}).hadir ? 'H' : '');
+          if (s) found = s;
+        }
+      });
+      return found;
+    }
+    const key = kehadiranKey(kegiatanId, tanggal);
+    const rec = p.kehadiran[key] || {};
+    return rec.status || (rec.hadir ? 'H' : '');
+  }
+  function setStatusPeserta(p, kegiatanId, tanggal, status) {
+    const key = kehadiranKey(kegiatanId, tanggal);
+    if (!p.kehadiran) p.kehadiran = {};
+    const cur = p.kehadiran[key] || {};
+    const waktu = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    if (status === 'A' || status === '') {
+      delete p.kehadiran[key];
+    } else {
+      p.kehadiran[key] = {
+        hadir: status === 'H' || status === 'P',
+        status: status,
+        waktu: cur.waktu || waktu
+      };
+    }
+  }
+
   // ====== CONNECTION STATUS ======
   function setConnStatus(state, text) {
     const el = document.getElementById('connStatus');
@@ -1237,12 +1339,18 @@
     const pesertaBaru = (data.peserta || []).map(p => {
       const kehadiranBaru = {};
       Object.keys(p.kehadiran || {}).forEach(key => {
+        const rec = p.kehadiran[key] || {};
+        const newRec = {
+          hadir: rec.hadir !== undefined ? !!rec.hadir : (rec.status === 'H' || rec.status === 'P'),
+          status: rec.status || (rec.hadir ? 'H' : ''),
+          waktu: rec.waktu || ''
+        };
         if (key.includes('|')) {
-          kehadiranBaru[key] = p.kehadiran[key];
+          kehadiranBaru[key] = newRec;
         } else {
           const keg = kegListRaw.find(x => sameId(x.id, key));
           const tgl = keg ? (keg.tanggal || todayISO()) : todayISO();
-          kehadiranBaru[kehadiranKey(key, tgl)] = p.kehadiran[key];
+          kehadiranBaru[kehadiranKey(key, tgl)] = newRec;
         }
       });
       return {
@@ -2169,7 +2277,6 @@
     scanKegiatanId = k.id;
     scanTanggal = tanggal || k.tanggal;
 
-    // RESET sesi scan
     scanSessionLog = [];
     lastScannedText = '';
     lastScannedTime = 0;
@@ -2217,7 +2324,6 @@
       const config = { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0 };
       cameras = await Html5Qrcode.getCameras();
       if (!cameras || cameras.length === 0) { setStatus('❌ Kamera tidak ditemukan.', 'err'); return; }
-      // Pilih kamera belakang jika ada
       currentCameraIndex = 0;
       const backIdx = cameras.findIndex(c => /back|rear|environment/i.test(c.label));
       if (backIdx !== -1) currentCameraIndex = backIdx;
@@ -2276,7 +2382,6 @@
     const kodeScan = String(decodedText || '').trim();
     const kodeLower = kodeScan.toLowerCase();
 
-    // 1) Cari peserta berdasarkan kode akses
     const p = peserta.find(x => x.kode.trim().toLowerCase() === kodeLower);
     if (!p) {
       setStatus(`❌ Kode akses "${kodeScan}" tidak terdaftar.`, 'err');
@@ -2284,7 +2389,6 @@
       return;
     }
 
-    // 2) Cek wajib ikut
     const k = findKegiatanById(scanKegiatanId);
     if (!k) { setStatus('❌ Kegiatan tidak ditemukan.', 'err'); return; }
     if (!(k.pesertaIds || []).some(id => sameId(id, p.id))) {
@@ -2293,7 +2397,6 @@
       return;
     }
 
-    // 3) CEGAH SCAN ULANG
     const key = kehadiranKey(scanKegiatanId, scanTanggal);
     if ((p.kehadiran[key] || {}).hadir) {
       const wkt = (p.kehadiran[key] || {}).waktu || '';
@@ -2302,12 +2405,10 @@
       return;
     }
 
-    // 4) Tandai hadir
     const waktu = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     if (!p.kehadiran) p.kehadiran = {};
-    p.kehadiran[key] = { hadir: true, waktu };
+    p.kehadiran[key] = { hadir: true, status: 'H', waktu };
 
-    // 5) Catat log global
     scanLog.push({
       waktu: new Date().toISOString(),
       nama: p.nama,
@@ -2317,7 +2418,6 @@
       tanggal: scanTanggal
     });
 
-    // 6) Catat sesi + render
     scanSessionLog.push({ nama: p.nama, kelas: p.kelas, waktu });
     renderScanRecentList();
 
@@ -2327,7 +2427,164 @@
     if (navigator.vibrate) navigator.vibrate(80);
   }
 
-  // ====== REKAP ======
+  // ====== REKAP DETAIL ======
+  const modalRekapDetail = document.getElementById('modalRekapDetail');
+  const modalRekapTitle = document.getElementById('modalRekapTitle');
+  const rekapDetailTanggalSelect = document.getElementById('rekapDetailTanggal');
+  const rdStatTotal = document.getElementById('rdStatTotal');
+  const rdStatHadir = document.getElementById('rdStatHadir');
+  const rdStatTidak = document.getElementById('rdStatTidak');
+  const rdHadirCount = document.getElementById('rdHadirCount');
+  const rdTidakCount = document.getElementById('rdTidakCount');
+  const rdAllCount = document.getElementById('rdAllCount');
+  const rdHadirList = document.getElementById('rdHadirList');
+  const rdTidakList = document.getElementById('rdTidakList');
+  const rdAllList = document.getElementById('rdAllList');
+
+  function openModalRekapDetail(kegiatanId) {
+    const k = findKegiatanById(kegiatanId);
+    if (!k) { alert('Kegiatan tidak ditemukan.'); return; }
+    rekapDetailKegiatanId = kegiatanId;
+
+    const tglList = getTanggalList(k);
+    const tglHariIni = todayISO();
+    rekapDetailTanggal = 'all';
+    if (tglList.includes(tglHariIni)) rekapDetailTanggal = tglHariIni;
+
+    rekapDetailTanggalSelect.innerHTML = '<option value="all">Semua Tanggal</option>' +
+      tglList.map(t => `<option value="${t}">${escapeHtml(formatTanggal(t))}${isHariIni(t) ? ' (Hari Ini)' : ''}</option>`).join('');
+    rekapDetailTanggalSelect.value = rekapDetailTanggal;
+
+    modalRekapTitle.textContent = '📊 Detail Rekap — ' + k.nama;
+    renderRekapDetail();
+    modalRekapDetail.classList.add('show');
+  }
+  function closeModalRekapDetail() {
+    modalRekapDetail.classList.remove('show');
+    rekapDetailKegiatanId = null;
+    rekapDetailTanggal = 'all';
+  }
+  function renderRekapDetail() {
+    if (rekapDetailKegiatanId == null) return;
+    const k = findKegiatanById(rekapDetailKegiatanId);
+    if (!k) { closeModalRekapDetail(); return; }
+    const pesertaWajib = (k.pesertaIds || []).map(id => findPesertaById(id)).filter(Boolean);
+    const tgl = rekapDetailTanggal;
+
+    let hadirArr = [], tidakArr = [];
+    pesertaWajib.forEach(p => {
+      const status = getStatusPeserta(p, k.id, tgl);
+      if (status === 'H' || status === 'P' || status === 'I' || status === 'S') {
+        const key = tgl === 'all' ? null : kehadiranKey(k.id, tgl);
+        const waktu = key ? ((p.kehadiran[key] || {}).waktu || '') : '';
+        hadirArr.push({ p, status, waktu });
+      } else {
+        tidakArr.push({ p, status });
+      }
+    });
+
+    rdStatTotal.textContent = pesertaWajib.length;
+    rdStatHadir.textContent = hadirArr.filter(x => x.status === 'H' || x.status === 'P').length;
+    rdStatTidak.textContent = pesertaWajib.length - rdStatHadir.textContent;
+    rdHadirCount.textContent = hadirArr.length;
+    rdTidakCount.textContent = tidakArr.length;
+    rdAllCount.textContent = pesertaWajib.length;
+
+    rdHadirList.innerHTML = hadirArr.length === 0 ? '<div class="rekap-list-empty">Belum ada yang hadir.</div>' : hadirArr.map(({ p, status, waktu }) => `
+      <div class="rekap-list-item">
+        <span class="rl-nama">${escapeHtml(p.nama)}</span>
+        <span class="rl-kelas">${escapeHtml(getKelasNama(p.kelas))}</span>
+        <span class="status-badge ${status}">${STATUS_LABELS[status] || status}</span>
+        ${waktu ? `<span class="rl-waktu">${escapeHtml(waktu)}</span>` : ''}
+      </div>
+    `).join('');
+
+    rdTidakList.innerHTML = tidakArr.length === 0 ? '<div class="rekap-list-empty">Semua sudah hadir 🎉</div>' : tidakArr.map(({ p }) => `
+      <div class="rekap-list-item">
+        <span class="rl-nama">${escapeHtml(p.nama)}</span>
+        <span class="rl-kelas">${escapeHtml(getKelasNama(p.kelas))}</span>
+      </div>
+    `).join('');
+
+    rdAllList.innerHTML = pesertaWajib.length === 0 ? '<div class="rekap-list-empty">Belum ada peserta wajib.</div>' : pesertaWajib.map(p => {
+      const cur = getStatusPeserta(p, k.id, tgl);
+      const btns = STATUS_ORDER.map(s => `<button type="button" class="status-btn ${cur === s ? 'active-' + s : ''}" data-pid="${p.id}" data-status="${s}">${s}</button>`).join('');
+      return `
+        <div class="rekap-list-item">
+          <span class="rl-nama">${escapeHtml(p.nama)}</span>
+          <span class="rl-kelas">${escapeHtml(getKelasNama(p.kelas))}</span>
+          <div class="status-group">${btns}</div>
+        </div>
+      `;
+    }).join('');
+
+    rdAllList.querySelectorAll('.status-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pid = btn.dataset.pid;
+        const status = btn.dataset.status;
+        const p = findPesertaById(pid);
+        if (!p) return;
+        const tglTarget = tgl === 'all' ? k.tanggal : tgl;
+        const cur = getStatusPeserta(p, k.id, tglTarget);
+        if (cur === status) setStatusPeserta(p, k.id, tglTarget, 'A');
+        else setStatusPeserta(p, k.id, tglTarget, status);
+        saveData();
+        renderRekapDetail();
+        renderPeserta(); renderKegiatan(); renderRekapCards();
+      });
+    });
+  }
+
+  rekapDetailTanggalSelect.addEventListener('change', e => {
+    rekapDetailTanggal = e.target.value;
+    renderRekapDetail();
+  });
+  document.getElementById('modalRekapClose').addEventListener('click', closeModalRekapDetail);
+  document.getElementById('btnRekapTutup').addEventListener('click', closeModalRekapDetail);
+  modalRekapDetail.addEventListener('click', e => { if (e.target === modalRekapDetail) closeModalRekapDetail(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalRekapDetail.classList.contains('show')) closeModalRekapDetail(); });
+
+  // ====== EXPORT CSV ======
+  function exportCSV(rows, filename) {
+    const csv = '\uFEFF' + rows.map(r => r.map(c => `"${String(c == null ? '' : c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), filename);
+  }
+  document.getElementById('btnDownloadHadir').addEventListener('click', () => {
+    if (rekapDetailKegiatanId == null) return;
+    const k = findKegiatanById(rekapDetailKegiatanId);
+    if (!k) return;
+    const pesertaWajib = (k.pesertaIds || []).map(id => findPesertaById(id)).filter(Boolean);
+    const rows = [['No', 'ID', 'Nama', 'Kelas', 'Status', 'Waktu', 'Kegiatan', 'Tanggal']];
+    let n = 0;
+    pesertaWajib.forEach(p => {
+      const status = getStatusPeserta(p, k.id, rekapDetailTanggal);
+      if (status === 'H' || status === 'P' || status === 'I' || status === 'S') {
+        n++;
+        const key = rekapDetailTanggal === 'all' ? null : kehadiranKey(k.id, rekapDetailTanggal);
+        const waktu = key ? ((p.kehadiran[key] || {}).waktu || '') : '';
+        rows.push([n, p.id, p.nama, p.kelas, STATUS_LABELS[status] || status, waktu, k.nama, rekapDetailTanggal === 'all' ? 'Semua' : formatTanggal(rekapDetailTanggal)]);
+      }
+    });
+    exportCSV(rows, `hadir_${k.nama.replace(/\s+/g, '_')}_${rekapDetailTanggal}.csv`);
+  });
+  document.getElementById('btnDownloadTidak').addEventListener('click', () => {
+    if (rekapDetailKegiatanId == null) return;
+    const k = findKegiatanById(rekapDetailKegiatanId);
+    if (!k) return;
+    const pesertaWajib = (k.pesertaIds || []).map(id => findPesertaById(id)).filter(Boolean);
+    const rows = [['No', 'ID', 'Nama', 'Kelas', 'Kegiatan', 'Tanggal']];
+    let n = 0;
+    pesertaWajib.forEach(p => {
+      const status = getStatusPeserta(p, k.id, rekapDetailTanggal);
+      if (!(status === 'H' || status === 'P' || status === 'I' || status === 'S')) {
+        n++;
+        rows.push([n, p.id, p.nama, p.kelas, k.nama, rekapDetailTanggal === 'all' ? 'Semua' : formatTanggal(rekapDetailTanggal)]);
+      }
+    });
+    exportCSV(rows, `belum_hadir_${k.nama.replace(/\s+/g, '_')}_${rekapDetailTanggal}.csv`);
+  });
+
+  // ====== REKAP CARDS ======
   function renderRekapCards() {
     const wrap = document.getElementById('rekapCards');
     if (!wrap) return;
@@ -2353,134 +2610,21 @@
     });
   }
 
-  const modalRekapDetail = document.getElementById('modalRekapDetail');
-  const modalRekapTitle = document.getElementById('modalRekapTitle');
-  const rekapDetailTanggalSelect = document.getElementById('rekapDetailTanggal');
-
-  function openModalRekapDetail(kegiatanId) {
-    const k = findKegiatanById(kegiatanId);
-    if (!k) { alert('Kegiatan tidak ditemukan.'); return; }
-    rekapDetailKegiatanId = kegiatanId;
-    modalRekapTitle.textContent = '📊 Rekap — ' + k.nama;
-
-    const list = getTanggalList(k);
-    const tglHariIni = todayISO();
-    let options = '<option value="all">Semua Tanggal</option>';
-    options += list.map(t => `<option value="${t}">${formatTanggal(t)}${t === tglHariIni ? ' (Hari Ini)' : ''}${t === k.tanggal ? ' • Utama' : ''}</option>`).join('');
-    rekapDetailTanggalSelect.innerHTML = options;
-    if (list.includes(tglHariIni)) rekapDetailTanggalSelect.value = tglHariIni;
-    else rekapDetailTanggalSelect.value = 'all';
-    rekapDetailTanggal = rekapDetailTanggalSelect.value;
-
-    renderRekapDetail();
-    modalRekapDetail.classList.add('show');
-  }
-  function closeModalRekapDetail() {
-    modalRekapDetail.classList.remove('show');
-    rekapDetailKegiatanId = null;
-  }
-  document.getElementById('modalRekapClose').addEventListener('click', closeModalRekapDetail);
-  document.getElementById('btnRekapTutup').addEventListener('click', closeModalRekapDetail);
-  modalRekapDetail.addEventListener('click', e => { if (e.target === modalRekapDetail) closeModalRekapDetail(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalRekapDetail.classList.contains('show')) closeModalRekapDetail(); });
-
-  rekapDetailTanggalSelect.addEventListener('change', e => {
-    rekapDetailTanggal = e.target.value;
-    renderRekapDetail();
-  });
-
-  function getRekapData() {
-    const k = findKegiatanById(rekapDetailKegiatanId);
-    if (!k) return null;
-    const tgl = rekapDetailTanggal;
-    const wajibIds = (k.pesertaIds || []).map(String);
-    const hadir = [], tidak = [];
-    wajibIds.forEach(pidStr => {
-      const p = peserta.find(x => String(x.id) === pidStr);
-      if (!p) return;
-      let isHadir = false, waktu = '';
-      if (tgl === 'all') {
-        Object.keys(p.kehadiran || {}).forEach(key => {
-          const [kid] = key.split('|');
-          if (sameId(kid, k.id) && (p.kehadiran[key] || {}).hadir) {
-            isHadir = true;
-            const w = (p.kehadiran[key] || {}).waktu || '';
-            if (w && (!waktu || w > waktu)) waktu = w;
-          }
-        });
-      } else {
-        const key = kehadiranKey(k.id, tgl);
-        if ((p.kehadiran[key] || {}).hadir) { isHadir = true; waktu = (p.kehadiran[key] || {}).waktu || ''; }
-      }
-      if (isHadir) hadir.push({ nama: p.nama, kelas: p.kelas, waktu });
-      else tidak.push({ nama: p.nama, kelas: p.kelas, waktu: '' });
-    });
-    return { k, tgl, hadir, tidak };
-  }
-
-  function renderRekapDetail() {
-    const data = getRekapData();
-    if (!data) return;
-    const { hadir, tidak } = data;
-    document.getElementById('rdStatTotal').textContent = hadir.length + tidak.length;
-    document.getElementById('rdStatHadir').textContent = hadir.length;
-    document.getElementById('rdStatTidak').textContent = tidak.length;
-    document.getElementById('rdHadirCount').textContent = hadir.length;
-    document.getElementById('rdTidakCount').textContent = tidak.length;
-
-    const hList = document.getElementById('rdHadirList');
-    if (hadir.length === 0) hList.innerHTML = '<div class="rekap-list-empty">Belum ada yang hadir.</div>';
-    else hList.innerHTML = hadir.map(h => `
-      <div class="rekap-list-item">
-        <span class="rl-nama">${escapeHtml(h.nama)}</span>
-        <span class="rl-kelas">${escapeHtml(h.kelas || '-')}</span>
-        ${h.waktu ? `<span class="rl-waktu">${escapeHtml(h.waktu)}</span>` : ''}
-      </div>
-    `).join('');
-
-    const tList = document.getElementById('rdTidakList');
-    if (tidak.length === 0) tList.innerHTML = '<div class="rekap-list-empty">Semua sudah hadir 🎉</div>';
-    else tList.innerHTML = tidak.map(t => `
-      <div class="rekap-list-item">
-        <span class="rl-nama">${escapeHtml(t.nama)}</span>
-        <span class="rl-kelas">${escapeHtml(t.kelas || '-')}</span>
-      </div>
-    `).join('');
-  }
-
-  function downloadRekapCSV(type) {
-    const data = getRekapData();
-    if (!data) return;
-    const { k, tgl, hadir, tidak } = data;
-    const rows = type === 'hadir' ? hadir : tidak;
-    const header = ['Nama', 'Kelas', 'Waktu', 'Kegiatan', 'Tanggal'];
-    const csvRows = [header];
-    rows.forEach(r => csvRows.push([r.nama, r.kelas || '', r.waktu || '', k.nama, tgl === 'all' ? 'Semua' : tgl]));
-    const csv = '\uFEFF' + csvRows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-    const fname = `rekap_${type}_${k.nama.replace(/[^a-z0-9]/gi, '_')}_${tgl}.csv`;
-    triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), fname);
-  }
-  document.getElementById('btnDownloadHadir').addEventListener('click', () => downloadRekapCSV('hadir'));
-  document.getElementById('btnDownloadTidak').addEventListener('click', () => downloadRekapCSV('tidak'));
-
   // ====== INIT ======
   function refreshAllUI() {
     renderKelas();
     renderPeserta();
     renderKegiatan();
+    updateAllOptions();
     renderRekapCards();
     renderScanKegiatanCards();
-    updateAllOptions();
   }
+  window.refreshAllUI = refreshAllUI;
 
-  async function init() {
+  (async function init() {
     await loadDataFromFirebase();
     refreshAllUI();
-  }
-
-  document.addEventListener('DOMContentLoaded', init);
-  // Jika DOM sudah siap (script di akhir body), langsung panggil
-  if (document.readyState !== 'loading') init();
+  })();
 </script>
 </body>
 </html>
