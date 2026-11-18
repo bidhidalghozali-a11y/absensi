@@ -363,7 +363,10 @@
   #reader video { border-radius: var(--radius); }
   .scan-controls { display: flex; gap: 10px; justify-content: center; margin: 16px 0; flex-wrap: wrap; }
   .scan-status { margin-top: 12px; font-weight: 600; min-height: 26px; font-size: 0.94rem; }
-  .scan-status.ok { color: var(--success-dark); } .scan-status.err { color: var(--danger-dark); } .scan-status.info { color: var(--primary-dark); }
+  .scan-status.ok { color: var(--success-dark); }
+  .scan-status.err { color: var(--danger-dark); }
+  .scan-status.info { color: var(--primary-dark); }
+  .scan-status.dup { color: var(--warning-dark); font-weight: 700; }
   .scan-overlay {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -494,6 +497,48 @@
   }
   .kelas-preview-box .label-row { font-weight: 700; margin-bottom: 5px; color: var(--primary-dark); }
   .kelas-preview-box .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* ====== STICKY SEARCH (panel absensi / edit kegiatan) ====== */
+  .kegiatan-search-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #fff;
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .kegiatan-search-sticky .search-row { margin-bottom: 8px; }
+  #kegiatanPesertaChecklist { max-height: 340px; overflow-y: auto; }
+
+  /* ====== DAFTAR SCAN SESI ====== */
+  .scan-recent-list {
+    margin-top: 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+  }
+  .scan-recent-list h4 {
+    position: sticky; top: 0; z-index: 1;
+    margin: 0; padding: 10px 14px;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    font-size: 0.85rem; color: var(--primary-dark);
+    border-bottom: 1px solid var(--border);
+  }
+  .scan-recent-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .scan-recent-item:last-child { border-bottom: none; }
+  .scan-recent-item .sr-nama { flex: 1; font-weight: 600; }
+  .scan-recent-item .sr-waktu {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; color: var(--muted);
+  }
 
   /* ====== TANGGAL OPSI ====== */
   .tanggal-opsi-list { display: flex; flex-direction: column; gap: 8px; }
@@ -822,16 +867,28 @@
         </div>
         <div class="form-group">
           <label>Peserta yang WAJIB Ikut</label>
-          <div class="search-row" style="margin-bottom:10px;">
-            <div class="form-group"><input type="text" id="kegiatanSearchNama" placeholder="🔍 Cari..." autocomplete="off"></div>
-            <div class="form-group"><select id="kegiatanFilterKelas"><option value="all">Semua Kelas</option></select></div>
+
+          <!-- STICKY: hanya search + filter kelas -->
+          <div class="kegiatan-search-sticky">
+            <div class="search-row">
+              <div class="form-group" style="margin-bottom:0;">
+                <input type="text" id="kegiatanSearchNama" placeholder="🔍 Cari nama / ID / kode..." autocomplete="off">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <select id="kegiatanFilterKelas"><option value="all">Semua Kelas</option></select>
+              </div>
+            </div>
+            <div class="checklist-actions" style="margin-bottom:0;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnPilihSemuaPesertaKegiatan">☑️ Pilih Semua (tampil)</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnBatalPilihPesertaKegiatan">✖️ Batal Pilih (tampil)</button>
+              <span id="kegiatanCheckedInfo" style="font-size:0.8rem;color:var(--primary-dark);font-weight:700;margin-left:auto;align-self:center;">✅ 0 peserta wajib dipilih</span>
+            </div>
           </div>
-          <div class="checklist-actions">
-            <button type="button" class="btn btn-secondary btn-sm" id="btnPilihSemuaPesertaKegiatan">☑️ Pilih Semua (tampil)</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btnBatalPilihPesertaKegiatan">✖️ Batal Pilih (tampil)</button>
-            <span id="kegiatanCheckedInfo" style="font-size:0.8rem;color:var(--primary-dark);font-weight:700;margin-left:auto;align-self:center;">✅ 0 peserta wajib dipilih</span>
+
+          <!-- SCROLL: hanya daftar peserta -->
+          <div class="checklist" id="kegiatanPesertaChecklist" style="max-height:340px;overflow-y:auto;">
+            <div class="empty">Belum ada peserta.</div>
           </div>
-          <div class="checklist" id="kegiatanPesertaChecklist"><div class="empty">Belum ada peserta.</div></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -916,6 +973,12 @@
         <button class="btn btn-secondary" id="btnGantiTanggal">📅 Ganti Tanggal</button>
       </div>
       <div class="scan-status" id="scanStatus"></div>
+
+      <!-- Daftar scan sesi -->
+      <div class="scan-recent-list" id="scanRecentList">
+        <h4>📋 Daftar Scan Sesi Ini (0)</h4>
+        <div id="scanRecentBody" class="rekap-list-empty">Belum ada scan.</div>
+      </div>
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-secondary" id="btnKembaliScan">← Kembali</button>
@@ -982,7 +1045,6 @@
     messagingSenderId: "726134801820",
     appId: "1:726134801820:web:c3e92256db3549dacbf459",
     measurementId: "G-5YKE3Y8L18",
-    // ⚠️ GANTI INI dengan URL Realtime Database project kamu
     databaseURL: "https://absensi-731b2-default-rtdb.asia-southeast1.firebasedatabase.app"
   };
   let db = null;
@@ -1028,6 +1090,9 @@
   let cameras = [];
   let currentCameraIndex = 0;
 
+  // Daftar scan SESI (tampil di modal scan)
+  let scanSessionLog = [];
+
   // Firebase sync state
   let firebaseReady = false;
   let firebaseRef = null;
@@ -1035,6 +1100,14 @@
   let pendingSaveTimeout = null;
 
   // ====== HELPERS ======
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function escapeJs(s) {
+    return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+  }
   function toNumId(v) { if (v === null || v === undefined || v === '') return null; const n = Number(v); return isNaN(n) ? null : Math.trunc(n); }
   function normPesertaId(v) { if (v === null || v === undefined || v === '') return null; return String(v); }
   function sameId(a, b) { if (a === null || a === undefined || b === null || b === undefined) return false; return String(a) === String(b); }
@@ -1052,6 +1125,14 @@
     if (!k) return false;
     if (!Array.isArray(k.pesertaIds)) return false;
     return k.pesertaIds.some(id => sameId(id, pesertaId));
+  }
+  function isKodeAlreadyScanned(kegiatanId, tanggal, kode) {
+    const kodeLower = String(kode).trim().toLowerCase();
+    return peserta.some(p => {
+      if (p.kode.trim().toLowerCase() !== kodeLower) return false;
+      const key = kehadiranKey(kegiatanId, tanggal);
+      return !!(p.kehadiran[key] || {}).hadir;
+    });
   }
 
   function cleanText(v) {
@@ -1208,7 +1289,6 @@
   function loadDataFromFirebase() {
     return new Promise((resolve) => {
       if (!db) {
-        // Fallback ke localStorage jika Firebase tidak siap
         try {
           const rawLocal = localStorage.getItem(STORAGE_KEY);
           if (rawLocal) applyDataToState(JSON.parse(rawLocal));
@@ -1229,7 +1309,6 @@
           if (typeof refreshAllUI === 'function') refreshAllUI();
           resolve(true);
         } else {
-          // Database kosong → migrasi dari localStorage jika ada
           const rawLocal = localStorage.getItem(STORAGE_KEY);
           if (rawLocal) {
             try {
@@ -1264,10 +1343,8 @@
     });
   }
 
-  // Debounced save
   function saveData() {
     if (!firebaseReady) { console.warn('Firebase belum siap, save diabaikan'); return; }
-    // Tetap simpan ke localStorage sebagai backup
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ kelasList, kegiatanList, peserta, scanLog }));
     } catch (e) {}
@@ -2050,6 +2127,24 @@
     setTimeout(() => { overlay.className = 'scan-overlay' + (success ? '' : ' err'); }, 600);
   }
 
+  function renderScanRecentList() {
+    const body = document.getElementById('scanRecentBody');
+    const header = document.querySelector('#scanRecentList h4');
+    if (!body) return;
+    if (header) header.textContent = `📋 Daftar Scan Sesi Ini (${scanSessionLog.length})`;
+    if (scanSessionLog.length === 0) {
+      body.innerHTML = '<div class="rekap-list-empty">Belum ada scan.</div>';
+      return;
+    }
+    body.innerHTML = scanSessionLog.map(s => `
+      <div class="scan-recent-item">
+        <span class="sr-nama">${escapeHtml(s.nama)}</span>
+        <span class="class-chip">${escapeHtml(s.kelas || '-')}</span>
+        <span class="sr-waktu">${escapeHtml(s.waktu)}</span>
+      </div>
+    `).join('');
+  }
+
   function renderScanKegiatanCards() {
     if (!scanKegiatanCards) return;
     if (kegiatanList.length === 0) { scanKegiatanCards.innerHTML = '<div class="empty">Belum ada kegiatan.</div>'; return; }
@@ -2074,166 +2169,181 @@
     scanKegiatanId = k.id;
     scanTanggal = tanggal || k.tanggal;
 
+    // RESET sesi scan
+    scanSessionLog = [];
+    lastScannedText = '';
+    lastScannedTime = 0;
+    renderScanRecentList();
+    setStatus('', '');
+
     modalScanTitle.textContent = '📷 Scan QR — ' + k.nama;
     const wajib = (k.pesertaIds || []).length;
     const hadir = hitungHadirPadaTanggal(k, scanTanggal);
     modalScanInfo.innerHTML = `
       Kegiatan: <b>${escapeHtml(k.nama)}</b><br>
-      📅 Tanggal scan: <b>${escapeHtml(formatTanggal(scanTanggal))}</b> (${isHariIni(scanTanggal) ? 'Hari Ini' : scanTanggal === k.tanggal ? 'utama' : 'tambahan'})<br>
-      Peserta wajib: <b>${wajib}</b> • Sudah hadir: <b>${hadir}</b>
+      📅 Tanggal scan: <b>${escapeHtml(formatTanggal(scanTanggal))}</b> ${isHariIni(scanTanggal) ? '<span style="color:var(--success-dark);font-weight:700;">(Hari Ini)</span>' : ''}<br>
+      👥 Hadir: <b>${hadir}</b> / ${wajib} peserta wajib
     `;
-    setStatus('Menyiapkan kamera...', 'info');
     modalScan.classList.add('show');
-    setTimeout(() => startCamera(currentCameraIndex), 200);
+    btnStart.disabled = false;
+    btnStop.disabled = true;
+    btnSwitch.disabled = true;
   }
 
-  async function closeModalScan() {
+  function closeModalScan() {
+    stopCamera();
     modalScan.classList.remove('show');
-    await stopCamera();
     scanKegiatanId = null;
     scanTanggal = null;
     lastScannedText = '';
     lastScannedTime = 0;
-    setStatus('', '');
-    renderScanKegiatanCards();
   }
   document.getElementById('modalScanClose').addEventListener('click', closeModalScan);
   document.getElementById('btnKembaliScan').addEventListener('click', closeModalScan);
   modalScan.addEventListener('click', e => { if (e.target === modalScan) closeModalScan(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalScan.classList.contains('show')) closeModalScan(); });
-
-  btnGantiTanggal.addEventListener('click', () => {
+  document.getElementById('btnGantiTanggal').addEventListener('click', () => {
     if (!scanKegiatanId) return;
     const id = scanKegiatanId;
-    const tglSekarang = scanTanggal;
-    closeModalScan().then(() => {
-      setTimeout(() => {
-        openModalPilihTanggal(id);
-        setTimeout(() => {
-          const btn = tanggalOpsiList.querySelector(`.tanggal-opsi[data-tanggal="${tglSekarang}"]`);
-          if (btn) btn.classList.add('selected');
-          pilihTanggalSelected = tglSekarang;
-        }, 50);
-      }, 100);
-    });
+    closeModalScan();
+    openModalPilihTanggal(id);
   });
 
-  async function startCamera(cameraIndex = 0) {
+  async function startCamera() {
     if (isScanning) return;
-    if (!scanKegiatanId) { setStatus('⚠️ Pilih kegiatan dulu.', 'err'); return; }
-    setStatus('Meminta izin kamera...', 'info');
-    btnStart.disabled = true;
+    if (typeof Html5Qrcode === 'undefined') { alert('Library QR belum termuat.'); return; }
     try {
-      cameras = await Html5Qrcode.getCameras();
-      if (!cameras || cameras.length === 0) throw new Error('Tidak ada kamera.');
-      if (cameraIndex >= cameras.length) cameraIndex = 0;
-      currentCameraIndex = cameraIndex;
       if (!html5QrCode) html5QrCode = new Html5Qrcode('reader');
-      let selectedCameraId = cameras[cameraIndex].id;
-      const backCam = cameras.find(c => /back|belakang|rear|environment/i.test(c.label));
-      if (cameraIndex === 0 && backCam && cameras.length > 1) { selectedCameraId = backCam.id; currentCameraIndex = cameras.indexOf(backCam); }
-      await html5QrCode.start(selectedCameraId, { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, onScanSuccess, () => {});
+      const config = { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0 };
+      cameras = await Html5Qrcode.getCameras();
+      if (!cameras || cameras.length === 0) { setStatus('❌ Kamera tidak ditemukan.', 'err'); return; }
+      // Pilih kamera belakang jika ada
+      currentCameraIndex = 0;
+      const backIdx = cameras.findIndex(c => /back|rear|environment/i.test(c.label));
+      if (backIdx !== -1) currentCameraIndex = backIdx;
+
+      await html5QrCode.start(
+        cameras[currentCameraIndex].id,
+        config,
+        onScanSuccess,
+        () => {}
+      );
       isScanning = true;
-      btnStart.disabled = true; btnStop.disabled = false; btnSwitch.disabled = cameras.length < 2;
-      setStatus('📷 Kamera aktif. Pindai QR.', 'info');
+      btnStart.disabled = true;
+      btnStop.disabled = false;
+      btnSwitch.disabled = cameras.length < 2;
+      setStatus('📷 Kamera aktif. Arahkan QR ke kamera.', 'info');
     } catch (err) {
       console.error(err);
-      btnStart.disabled = false; btnStop.disabled = true; btnSwitch.disabled = true;
-      setStatus('❌ Gagal: ' + (err.message || err), 'err');
-      isScanning = false;
+      setStatus('❌ Gagal akses kamera: ' + (err.message || err), 'err');
     }
   }
+
   async function stopCamera() {
-    if (!html5QrCode || !isScanning) return;
-    try { await html5QrCode.stop(); await html5QrCode.clear(); } catch (e) {}
+    if (!isScanning || !html5QrCode) return;
+    try {
+      await html5QrCode.stop();
+      await html5QrCode.clear();
+    } catch (e) { console.warn(e); }
     isScanning = false;
-    btnStart.disabled = false; btnStop.disabled = true; btnSwitch.disabled = true;
+    btnStart.disabled = false;
+    btnStop.disabled = true;
+    btnSwitch.disabled = true;
   }
-  btnStart.addEventListener('click', () => startCamera(currentCameraIndex));
-  btnStop.addEventListener('click', () => stopCamera());
-  btnSwitch.addEventListener('click', async () => { if (cameras.length < 2) return; await stopCamera(); startCamera((currentCameraIndex + 1) % cameras.length); });
+
+  async function switchCamera() {
+    if (!isScanning || !cameras || cameras.length < 2) return;
+    try {
+      await html5QrCode.stop();
+      currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+      await html5QrCode.start(cameras[currentCameraIndex].id, { fps: 10, qrbox: { width: 240, height: 240 } }, onScanSuccess, () => {});
+      setStatus('🔄 Kamera diganti.', 'info');
+    } catch (e) { console.error(e); setStatus('❌ Gagal ganti kamera.', 'err'); }
+  }
+
+  btnStart.addEventListener('click', startCamera);
+  btnStop.addEventListener('click', stopCamera);
+  btnSwitch.addEventListener('click', switchCamera);
 
   function onScanSuccess(decodedText) {
+    if (!scanKegiatanId || !scanTanggal) return;
+
     const now = Date.now();
-    if (decodedText === lastScannedText && now - lastScannedTime < 2500) return;
-    lastScannedText = decodedText; lastScannedTime = now;
-    if (!scanKegiatanId || !scanTanggal) { setStatus('⚠️ Pilih kegiatan & tanggal dulu.', 'err'); showOverlay(false); beep(false); return; }
-    const kegAktif = findKegiatanById(scanKegiatanId);
-    if (!kegAktif) { setStatus('❌ Kegiatan sudah tidak ada.', 'err'); showOverlay(false); beep(false); return; }
-    const scanned = decodedText.trim();
-    const p = peserta.find(x => x.kode.trim().toLowerCase() === scanned.toLowerCase());
-    if (!p) { setStatus(`❌ Kode "${scanned}" tidak dikenali.`, 'err'); showOverlay(false); beep(false); return; }
-    if (!isPesertaWajibIkut(p.id, scanKegiatanId)) { setStatus(`❌ ${p.nama} TIDAK WAJIB ikut kegiatan ini.`, 'err'); showOverlay(false); beep(false); return; }
+    if (decodedText === lastScannedText && now - lastScannedTime < 2000) return;
+    lastScannedText = decodedText;
+    lastScannedTime = now;
 
+    const kodeScan = String(decodedText || '').trim();
+    const kodeLower = kodeScan.toLowerCase();
+
+    // 1) Cari peserta berdasarkan kode akses
+    const p = peserta.find(x => x.kode.trim().toLowerCase() === kodeLower);
+    if (!p) {
+      setStatus(`❌ Kode akses "${kodeScan}" tidak terdaftar.`, 'err');
+      showOverlay(false);
+      return;
+    }
+
+    // 2) Cek wajib ikut
+    const k = findKegiatanById(scanKegiatanId);
+    if (!k) { setStatus('❌ Kegiatan tidak ditemukan.', 'err'); return; }
+    if (!(k.pesertaIds || []).some(id => sameId(id, p.id))) {
+      setStatus(`⚠️ ${p.nama} tidak termasuk peserta wajib kegiatan ini.`, 'err');
+      showOverlay(false);
+      return;
+    }
+
+    // 3) CEGAH SCAN ULANG
     const key = kehadiranKey(scanKegiatanId, scanTanggal);
-    const cur = p.kehadiran[key] || {};
-    if (cur.hadir) { setStatus(`⚠️ ${p.nama} sudah hadir pada ${formatTanggal(scanTanggal)} (${cur.waktu}).`, 'err'); showOverlay(false); beep(false); return; }
+    if ((p.kehadiran[key] || {}).hadir) {
+      const wkt = (p.kehadiran[key] || {}).waktu || '';
+      setStatus(`⚠️ Kode akses sudah terscan! ${p.nama} sudah tercatat hadir${wkt ? ' pukul ' + wkt : ''} pada ${formatTanggal(scanTanggal)}.`, 'dup');
+      showOverlay(false);
+      return;
+    }
 
-    const nowDate = new Date();
-    const waktu = formatWaktu(nowDate);
-    const tanggalScan = nowDate.getFullYear() + '-' + String(nowDate.getMonth()+1).padStart(2,'0') + '-' + String(nowDate.getDate()).padStart(2,'0');
-    p.kehadiran[key] = { hadir: true, waktu, tanggal: scanTanggal, tanggalScan };
-    scanLog.unshift({
-      waktu, nama: p.nama, kode: p.kode,
-      kelas: getKelasNama(p.kelas),
-      kegiatan: `${kegAktif.nama} (${formatTanggal(scanTanggal)})`,
+    // 4) Tandai hadir
+    const waktu = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    if (!p.kehadiran) p.kehadiran = {};
+    p.kehadiran[key] = { hadir: true, waktu };
+
+    // 5) Catat log global
+    scanLog.push({
+      waktu: new Date().toISOString(),
+      nama: p.nama,
+      kode: p.kode,
+      kelas: p.kelas,
+      kegiatan: k.nama,
       tanggal: scanTanggal
     });
+
+    // 6) Catat sesi + render
+    scanSessionLog.push({ nama: p.nama, kelas: p.kelas, waktu });
+    renderScanRecentList();
+
     saveData();
-
-    setStatus(`✅ [${p.id}] ${p.nama} — hadir! (${formatTanggal(scanTanggal)})`, 'ok');
-    showOverlay(true); beep(true);
-
-    const k = findKegiatanById(scanKegiatanId);
-    if (k) {
-      const wajib = (k.pesertaIds || []).length;
-      const hadir = hitungHadirPadaTanggal(k, scanTanggal);
-      modalScanInfo.innerHTML = `
-        Kegiatan: <b>${escapeHtml(k.nama)}</b><br>
-        📅 Tanggal scan: <b>${escapeHtml(formatTanggal(scanTanggal))}</b> (${isHariIni(scanTanggal) ? 'Hari Ini' : scanTanggal === k.tanggal ? 'utama' : 'tambahan'})<br>
-        Peserta wajib: <b>${wajib}</b> • Sudah hadir: <b>${hadir}</b>
-      `;
-    }
-    if (modalRekapDetail.classList.contains('show') && sameId(rekapDetailKegiatanId, scanKegiatanId)) {
-      renderRekapDetail();
-    }
-    renderRekapCards();
-    if (navigator.vibrate) navigator.vibrate(120);
-  }
-
-  let audioCtx = null;
-  function beep(success) {
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.type = 'sine'; osc.frequency.value = success ? 880 : 300;
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
-      osc.start(); osc.stop(audioCtx.currentTime + 0.2);
-    } catch (e) {}
+    setStatus(`✅ ${p.nama} (${p.kelas}) tercatat hadir.`, 'ok');
+    showOverlay(true);
+    if (navigator.vibrate) navigator.vibrate(80);
   }
 
   // ====== REKAP ======
-  const modalRekapDetail = document.getElementById('modalRekapDetail');
-  const rekapDetailTanggalSel = document.getElementById('rekapDetailTanggal');
-  const rdHadirList = document.getElementById('rdHadirList');
-  const rdTidakList = document.getElementById('rdTidakList');
-
   function renderRekapCards() {
     const wrap = document.getElementById('rekapCards');
     if (!wrap) return;
-    if (kegiatanList.length === 0) {
-      wrap.innerHTML = '<div class="empty">Belum ada kegiatan. Tambahkan di panel Absensi.</div>';
-      return;
-    }
+    if (kegiatanList.length === 0) { wrap.innerHTML = '<div class="empty">Belum ada kegiatan.</div>'; return; }
     const sorted = [...kegiatanList].sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
-    wrap.innerHTML = sorted.map(k => `
-      <button type="button" class="rekap-card" data-id="${k.id}">
-        <div class="rc-title">${escapeHtml(k.nama)}</div>
-      </button>
-    `).join('');
-
+    wrap.innerHTML = sorted.map(k => {
+      const wajib = (k.pesertaIds || []).length;
+      const hadirUnik = hitungHadirUnik(k);
+      return `
+        <button type="button" class="rekap-card" data-id="${k.id}">
+          <div class="rc-title">${escapeHtml(k.nama)}</div>
+          <div style="font-size:0.8rem;color:var(--muted);">📅 ${escapeHtml(formatTanggal(k.tanggal))}</div>
+          <div style="font-size:0.82rem;font-weight:700;color:var(--primary-dark);">✅ ${hadirUnik}/${wajib} hadir</div>
+        </button>
+      `;
+    }).join('');
     wrap.querySelectorAll('.rekap-card').forEach(card => {
       card.addEventListener('click', () => {
         const id = toNumId(card.dataset.id);
@@ -2243,211 +2353,134 @@
     });
   }
 
+  const modalRekapDetail = document.getElementById('modalRekapDetail');
+  const modalRekapTitle = document.getElementById('modalRekapTitle');
+  const rekapDetailTanggalSelect = document.getElementById('rekapDetailTanggal');
+
   function openModalRekapDetail(kegiatanId) {
     const k = findKegiatanById(kegiatanId);
     if (!k) { alert('Kegiatan tidak ditemukan.'); return; }
     rekapDetailKegiatanId = kegiatanId;
+    modalRekapTitle.textContent = '📊 Rekap — ' + k.nama;
 
-    document.getElementById('modalRekapTitle').textContent = '📊 Rekap — ' + k.nama;
-
-    const tglHariIni = todayISO();
     const list = getTanggalList(k);
-    const tglListFinal = list.includes(tglHariIni)
-      ? [tglHariIni, ...list.filter(t => t !== tglHariIni)]
-      : [tglHariIni, ...list];
-
-    rekapDetailTanggalSel.innerHTML = tglListFinal.map(t => {
-      const isToday = t === tglHariIni;
-      const isUtama = t === k.tanggal;
-      let suffix = '';
-      if (isToday) suffix = ' 🔥 (Hari Ini)';
-      else if (isUtama) suffix = ' (utama)';
-      return `<option value="${t}">📅 ${escapeHtml(formatTanggal(t))}${suffix}</option>`;
-    }).join('') + '<option value="all">📋 Semua Tanggal (Ringkasan)</option>';
-
-    rekapDetailTanggal = tglHariIni;
-    rekapDetailTanggalSel.value = tglHariIni;
+    const tglHariIni = todayISO();
+    let options = '<option value="all">Semua Tanggal</option>';
+    options += list.map(t => `<option value="${t}">${formatTanggal(t)}${t === tglHariIni ? ' (Hari Ini)' : ''}${t === k.tanggal ? ' • Utama' : ''}</option>`).join('');
+    rekapDetailTanggalSelect.innerHTML = options;
+    if (list.includes(tglHariIni)) rekapDetailTanggalSelect.value = tglHariIni;
+    else rekapDetailTanggalSelect.value = 'all';
+    rekapDetailTanggal = rekapDetailTanggalSelect.value;
 
     renderRekapDetail();
     modalRekapDetail.classList.add('show');
   }
-
   function closeModalRekapDetail() {
     modalRekapDetail.classList.remove('show');
     rekapDetailKegiatanId = null;
-    rekapDetailTanggal = 'all';
   }
-
   document.getElementById('modalRekapClose').addEventListener('click', closeModalRekapDetail);
   document.getElementById('btnRekapTutup').addEventListener('click', closeModalRekapDetail);
   modalRekapDetail.addEventListener('click', e => { if (e.target === modalRekapDetail) closeModalRekapDetail(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalRekapDetail.classList.contains('show')) closeModalRekapDetail(); });
 
-  rekapDetailTanggalSel.addEventListener('change', e => {
+  rekapDetailTanggalSelect.addEventListener('change', e => {
     rekapDetailTanggal = e.target.value;
     renderRekapDetail();
   });
 
-  function getRekapDetailData() {
+  function getRekapData() {
     const k = findKegiatanById(rekapDetailKegiatanId);
     if (!k) return null;
-    const wajibIds = (k.pesertaIds || []).map(id => String(id));
-    const pesertaWajib = wajibIds.map(id => findPesertaById(id)).filter(Boolean);
-
-    if (rekapDetailTanggal === 'all') {
-      const tglList = getTanggalList(k);
-      const hadir = [];
-      const tidak = [];
-      pesertaWajib.forEach(p => {
-        const hadirTgl = tglList.filter(t => (p.kehadiran[kehadiranKey(k.id, t)] || {}).hadir);
-        if (hadirTgl.length > 0) {
-          const lastKey = hadirTgl[hadirTgl.length - 1];
-          const stat = p.kehadiran[kehadiranKey(k.id, lastKey)] || {};
-          hadir.push({ p, waktu: stat.waktu || '', tanggal: lastKey, tanggalList: hadirTgl });
-        } else {
-          tidak.push({ p });
-        }
-      });
-      return { k, hadir, tidak, tglLabel: 'Semua Tanggal', tglList };
-    } else {
-      const key = kehadiranKey(k.id, rekapDetailTanggal);
-      const hadir = [];
-      const tidak = [];
-      pesertaWajib.forEach(p => {
-        const stat = p.kehadiran[key] || {};
-        if (stat.hadir) hadir.push({ p, waktu: stat.waktu || '', tanggal: rekapDetailTanggal });
-        else tidak.push({ p });
-      });
-      return { k, hadir, tidak, tglLabel: formatTanggal(rekapDetailTanggal), tglList: [rekapDetailTanggal] };
-    }
+    const tgl = rekapDetailTanggal;
+    const wajibIds = (k.pesertaIds || []).map(String);
+    const hadir = [], tidak = [];
+    wajibIds.forEach(pidStr => {
+      const p = peserta.find(x => String(x.id) === pidStr);
+      if (!p) return;
+      let isHadir = false, waktu = '';
+      if (tgl === 'all') {
+        Object.keys(p.kehadiran || {}).forEach(key => {
+          const [kid] = key.split('|');
+          if (sameId(kid, k.id) && (p.kehadiran[key] || {}).hadir) {
+            isHadir = true;
+            const w = (p.kehadiran[key] || {}).waktu || '';
+            if (w && (!waktu || w > waktu)) waktu = w;
+          }
+        });
+      } else {
+        const key = kehadiranKey(k.id, tgl);
+        if ((p.kehadiran[key] || {}).hadir) { isHadir = true; waktu = (p.kehadiran[key] || {}).waktu || ''; }
+      }
+      if (isHadir) hadir.push({ nama: p.nama, kelas: p.kelas, waktu });
+      else tidak.push({ nama: p.nama, kelas: p.kelas, waktu: '' });
+    });
+    return { k, tgl, hadir, tidak };
   }
 
   function renderRekapDetail() {
-    const data = getRekapDetailData();
+    const data = getRekapData();
     if (!data) return;
     const { hadir, tidak } = data;
-
     document.getElementById('rdStatTotal').textContent = hadir.length + tidak.length;
     document.getElementById('rdStatHadir').textContent = hadir.length;
     document.getElementById('rdStatTidak').textContent = tidak.length;
     document.getElementById('rdHadirCount').textContent = hadir.length;
     document.getElementById('rdTidakCount').textContent = tidak.length;
 
-    if (hadir.length === 0) {
-      rdHadirList.innerHTML = '<div class="rekap-list-empty">Belum ada yang hadir.</div>';
-    } else {
-      rdHadirList.innerHTML = hadir.map(h => {
-        const waktuInfo = rekapDetailTanggal === 'all'
-          ? `<span class="rl-waktu">${h.tanggalList.length}x • ${escapeHtml(h.waktu)}</span>`
-          : `<span class="rl-waktu">${escapeHtml(h.waktu)}</span>`;
-        return `
-          <div class="rekap-list-item">
-            <span class="rl-nama">${escapeHtml(h.p.nama)}</span>
-            <span class="id-chip">${escapeHtml(h.p.id)}</span>
-            <span class="rl-kelas">${escapeHtml(getKelasNama(h.p.kelas))}</span>
-            ${waktuInfo}
-          </div>
-        `;
-      }).join('');
-    }
+    const hList = document.getElementById('rdHadirList');
+    if (hadir.length === 0) hList.innerHTML = '<div class="rekap-list-empty">Belum ada yang hadir.</div>';
+    else hList.innerHTML = hadir.map(h => `
+      <div class="rekap-list-item">
+        <span class="rl-nama">${escapeHtml(h.nama)}</span>
+        <span class="rl-kelas">${escapeHtml(h.kelas || '-')}</span>
+        ${h.waktu ? `<span class="rl-waktu">${escapeHtml(h.waktu)}</span>` : ''}
+      </div>
+    `).join('');
 
-    if (tidak.length === 0) {
-      rdTidakList.innerHTML = '<div class="rekap-list-empty">Semua sudah hadir 🎉</div>';
-    } else {
-      rdTidakList.innerHTML = tidak.map(t => `
-        <div class="rekap-list-item">
-          <span class="rl-nama">${escapeHtml(t.p.nama)}</span>
-          <span class="id-chip">${escapeHtml(t.p.id)}</span>
-          <span class="rl-kelas">${escapeHtml(getKelasNama(t.p.kelas))}</span>
-        </div>
-      `).join('');
-    }
+    const tList = document.getElementById('rdTidakList');
+    if (tidak.length === 0) tList.innerHTML = '<div class="rekap-list-empty">Semua sudah hadir 🎉</div>';
+    else tList.innerHTML = tidak.map(t => `
+      <div class="rekap-list-item">
+        <span class="rl-nama">${escapeHtml(t.nama)}</span>
+        <span class="rl-kelas">${escapeHtml(t.kelas || '-')}</span>
+      </div>
+    `).join('');
   }
 
-  function downloadRekapCSV(mode) {
-    const data = getRekapDetailData();
+  function downloadRekapCSV(type) {
+    const data = getRekapData();
     if (!data) return;
-    const { k, hadir, tidak } = data;
-    const rows = [];
-    if (mode === 'hadir') {
-      rows.push(['Status', 'ID', 'Nama', 'Kelas', 'Kode Akses', 'Tanggal Rekap', 'Waktu Hadir', 'Jumlah Hari Hadir']);
-      hadir.forEach(h => {
-        rows.push([
-          'Hadir', h.p.id, h.p.nama, getKelasNama(h.p.kelas), h.p.kode,
-          rekapDetailTanggal === 'all' ? 'Semua Tanggal' : formatTanggal(rekapDetailTanggal),
-          h.waktu || '-',
-          h.tanggalList ? h.tanggalList.length : 1
-        ]);
-      });
-    } else {
-      rows.push(['Status', 'ID', 'Nama', 'Kelas', 'Kode Akses', 'Tanggal Rekap']);
-      tidak.forEach(t => {
-        rows.push([
-          'Belum Hadir', t.p.id, t.p.nama, getKelasNama(t.p.kelas), t.p.kode,
-          rekapDetailTanggal === 'all' ? 'Semua Tanggal' : formatTanggal(rekapDetailTanggal)
-        ]);
-      });
-    }
-    if (rows.length <= 1) { alert('Tidak ada data untuk diunduh.'); return; }
-
-    const csv = '\uFEFF' + rows.map(r =>
-      r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
-    ).join('\r\n');
-
-    const suffix = mode === 'hadir' ? 'hadir' : 'belum_hadir';
-    const tglSuffix = rekapDetailTanggal === 'all' ? 'semua_tanggal' : rekapDetailTanggal;
-    const safeNama = k.nama.replace(/[^a-zA-Z0-9]+/g, '_');
-    const filename = `rekap_${safeNama}_${suffix}_${tglSuffix}.csv`;
-    triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), filename);
+    const { k, tgl, hadir, tidak } = data;
+    const rows = type === 'hadir' ? hadir : tidak;
+    const header = ['Nama', 'Kelas', 'Waktu', 'Kegiatan', 'Tanggal'];
+    const csvRows = [header];
+    rows.forEach(r => csvRows.push([r.nama, r.kelas || '', r.waktu || '', k.nama, tgl === 'all' ? 'Semua' : tgl]));
+    const csv = '\uFEFF' + csvRows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const fname = `rekap_${type}_${k.nama.replace(/[^a-z0-9]/gi, '_')}_${tgl}.csv`;
+    triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), fname);
   }
-
   document.getElementById('btnDownloadHadir').addEventListener('click', () => downloadRekapCSV('hadir'));
   document.getElementById('btnDownloadTidak').addEventListener('click', () => downloadRekapCSV('tidak'));
 
-  // ====== UTILS ======
-  function formatWaktu(d) {
-    const pad = n => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }
-  function escapeHtml(str) {
-    return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-  }
-  function escapeJs(str) {
-    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
-  }
-
-  // ====== REFRESH ALL UI ======
+  // ====== INIT ======
   function refreshAllUI() {
     renderKelas();
-    renderKegiatan();
-    updateAllOptions();
     renderPeserta();
-    renderScanKegiatanCards();
+    renderKegiatan();
     renderRekapCards();
-    if (modalRekapDetail.classList.contains('show') && rekapDetailKegiatanId) {
-      renderRekapDetail();
-    }
+    renderScanKegiatanCards();
+    updateAllOptions();
   }
 
-  // ====== INIT ======
-  (async () => {
-    // Loading overlay per panel
-    document.querySelectorAll('.panel').forEach(p => {
-      if (!p.querySelector('.loading-overlay')) {
-        const ov = document.createElement('div');
-        ov.className = 'loading-overlay';
-        ov.innerHTML = '<div class="loading-spinner"></div><div style="margin-top:10px;color:var(--muted);font-weight:600;">Memuat data dari server...</div>';
-        p.appendChild(ov);
-      }
-    });
-
+  async function init() {
     await loadDataFromFirebase();
-    syncPesertaIdCounter();
     refreshAllUI();
+  }
 
-    // Hapus loading overlay
-    document.querySelectorAll('.loading-overlay').forEach(ov => ov.remove());
-  })();
+  document.addEventListener('DOMContentLoaded', init);
+  // Jika DOM sudah siap (script di akhir body), langsung panggil
+  if (document.readyState !== 'loading') init();
 </script>
 </body>
 </html>
