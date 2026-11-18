@@ -1,0 +1,2453 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistem Kehadiran - Absensi Multi Kegiatan</title>
+<style>
+  :root {
+    --primary: #6366f1; --primary-dark: #4f46e5; --primary-light: #818cf8;
+    --success: #10b981; --success-dark: #059669;
+    --danger: #ef4444; --danger-dark: #dc2626;
+    --warning: #f59e0b; --warning-dark: #d97706;
+    --bg: #f1f5f9; --bg-gradient: linear-gradient(135deg, #eef2ff 0%, #f8fafc 50%, #ecfeff 100%);
+    --card: #ffffff; --text: #0f172a; --muted: #64748b; --border: #e2e8f0;
+    --shadow-sm: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+    --shadow-md: 0 4px 12px rgba(15,23,42,0.08), 0 2px 4px rgba(15,23,42,0.04);
+    --shadow-lg: 0 20px 40px rgba(15,23,42,0.12), 0 8px 16px rgba(15,23,42,0.06);
+    --radius: 14px; --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg-gradient);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .container { max-width: 1140px; margin: 0 auto; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+  /* ====== CONNECTION STATUS ====== */
+  .conn-status {
+    position: fixed; top: 12px; right: 12px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+    box-shadow: var(--shadow-md);
+    z-index: 999;
+    transition: all 0.3s;
+  }
+  .conn-status.online { background: #d1fae5; color: #065f46; }
+  .conn-status.offline { background: #fee2e2; color: #991b1b; }
+  .conn-status.syncing { background: #fef3c7; color: #92400e; }
+  .conn-status::before {
+    content: ''; width: 8px; height: 8px; border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* ====== HEADER ====== */
+  header {
+    text-align: center;
+    margin-bottom: 28px;
+    padding: 28px 20px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -10%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -60%; left: -5%;
+    width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  header h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.5px; position: relative; z-index: 1; }
+  header p { color: rgba(255,255,255,0.85); margin-top: 6px; font-size: 0.95rem; position: relative; z-index: 1; }
+
+  /* ====== TABS ====== */
+  .tabs {
+    display: flex; gap: 6px;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 8px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(226,232,240,0.6);
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    position: sticky; top: 8px; z-index: 50;
+  }
+  .tab-btn {
+    flex: 1; min-width: 120px;
+    padding: 12px 16px;
+    border: none; background: transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.9rem; font-weight: 600;
+    color: var(--muted);
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+  }
+  .tab-btn:hover { background: #eef2ff; color: var(--primary-dark); transform: translateY(-1px); }
+  .tab-btn.active {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(99,102,241,0.35);
+  }
+
+  /* ====== PANELS ====== */
+  .panel {
+    display: none;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: var(--shadow-md);
+    animation: fadeIn 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .panel h2 {
+    font-size: 1.35rem; font-weight: 800;
+    margin-bottom: 20px;
+    color: var(--text);
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--border);
+    letter-spacing: -0.3px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel h2::before {
+    content: '';
+    display: inline-block;
+    width: 4px; height: 22px;
+    background: linear-gradient(180deg, var(--primary) 0%, #8b5cf6 100%);
+    border-radius: 4px;
+  }
+  .section-sub {
+    font-size: 1rem;
+    color: var(--text);
+    margin: 24px 0 12px;
+    font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* ====== FORM ====== */
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; margin-bottom: 7px; font-size: 0.88rem; font-weight: 600; color: var(--text); }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.94rem;
+    transition: all 0.2s;
+    font-family: inherit;
+    background: #fff;
+    color: var(--text);
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.12);
+  }
+  .form-group small { display: block; color: var(--muted); margin-top: 5px; font-size: 0.78rem; }
+
+  /* ====== BUTTONS ====== */
+  .btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.28);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(99,102,241,0.4); }
+  .btn-danger {
+    background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(239,68,68,0.28);
+  }
+  .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(239,68,68,0.4); }
+  .btn-success {
+    background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(16,185,129,0.28);
+  }
+  .btn-success:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16,185,129,0.4); }
+  .btn-warning {
+    background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%);
+    color: #fff;
+  }
+  .btn-warning:hover { transform: translateY(-1px); }
+  .btn-secondary {
+    background: #f1f5f9;
+    color: var(--text);
+    border: 1.5px solid var(--border);
+  }
+  .btn-secondary:hover { background: #e2e8f0; border-color: #cbd5e1; }
+  .btn-sm { padding: 7px 12px; font-size: 0.78rem; border-radius: 8px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+  /* ====== TOOLBAR & SEARCH ====== */
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  .search-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 12px; }
+  .search-row .form-group { flex: 1; margin-bottom: 0; min-width: 160px; }
+
+  /* ====== TABLE ====== */
+  .table-wrapper {
+    overflow-x: auto;
+    margin-top: 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  thead { background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); }
+  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th {
+    font-weight: 700;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+  tbody tr { transition: background 0.15s; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* ====== BADGES ====== */
+  .badge { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.2px; }
+  .badge-hadir { background: #d1fae5; color: #065f46; }
+  .badge-tidak { background: #fee2e2; color: #991b1b; }
+  .badge-baru { background: #fef3c7; color: #92400e; }
+
+  .code-chip {
+    display: inline-block; padding: 4px 10px;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    color: var(--primary-dark);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-weight: 700; font-size: 0.82rem; letter-spacing: 1px;
+  }
+  .id-chip {
+    display: inline-block; padding: 4px 10px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-weight: 700; font-size: 0.82rem; letter-spacing: 1px;
+  }
+  .class-chip {
+    display: inline-block; padding: 4px 11px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border-radius: 20px;
+    font-size: 0.78rem; font-weight: 700;
+  }
+  .kelas-value-chip {
+    display: inline-block; padding: 4px 10px;
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    color: #3730a3;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem; font-weight: 700;
+  }
+  .tanggal-chip {
+    display: inline-block; padding: 4px 11px;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+    border-radius: 20px;
+    font-size: 0.76rem; font-weight: 700;
+  }
+
+  .empty { text-align: center; color: var(--muted); padding: 28px 20px; font-style: italic; font-size: 0.9rem; }
+  .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* ====== BULK BAR ====== */
+  .bulk-bar {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border: 1.5px solid #c7d2fe;
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-top: 14px; margin-bottom: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+  .bulk-bar .bulk-info { font-size: 0.86rem; font-weight: 700; color: var(--primary-dark); margin-right: auto; }
+  .bulk-bar select {
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-family: inherit;
+    background: #fff;
+    min-width: 160px;
+  }
+
+  /* ====== KEGIATAN CARDS ====== */
+  .kegiatan-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  .kegiatan-card {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 18px;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    font-family: inherit;
+    display: flex; flex-direction: column; gap: 8px;
+    align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    min-height: 100px;
+  }
+  .kegiatan-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary) 0%, #8b5cf6 100%);
+    opacity: 0; transition: opacity 0.22s;
+  }
+  .kegiatan-card:hover {
+    border-color: var(--primary-light);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+  }
+  .kegiatan-card:hover::before { opacity: 1; }
+  .kegiatan-card:active { transform: translateY(0); }
+  .kegiatan-card .card-title { font-size: 1.05rem; font-weight: 700; color: var(--text); line-height: 1.35; }
+
+  /* ====== SCAN ====== */
+  #reader { width: 100%; max-width: 480px; margin: 0 auto; border-radius: var(--radius); overflow: hidden; background: #000; }
+  #reader video { border-radius: var(--radius); }
+  .scan-controls { display: flex; gap: 10px; justify-content: center; margin: 16px 0; flex-wrap: wrap; }
+  .scan-status { margin-top: 12px; font-weight: 600; min-height: 26px; font-size: 0.94rem; }
+  .scan-status.ok { color: var(--success-dark); } .scan-status.err { color: var(--danger-dark); } .scan-status.info { color: var(--primary-dark); }
+  .scan-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius);
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.2s;
+    font-size: 3.5rem; color: #fff;
+    background: rgba(16,185,129,0.7);
+  }
+  .scan-overlay.err { background: rgba(239,68,68,0.7); }
+  .scan-overlay.show { opacity: 1; }
+  .reader-wrap { position: relative; max-width: 480px; margin: 0 auto; }
+
+  /* ====== STATS ====== */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .stat-card {
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    text-align: center;
+    border: 1px solid #c7d2fe;
+  }
+  .stat-card .num { font-size: 1.7rem; font-weight: 800; color: var(--primary-dark); letter-spacing: -0.5px; }
+  .stat-card .label { font-size: 0.78rem; color: var(--muted); margin-top: 2px; font-weight: 600; }
+  .stat-card.hadir { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-color: #6ee7b7; }
+  .stat-card.hadir .num { color: #065f46; }
+  .stat-card.tidak { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-color: #fca5a5; }
+  .stat-card.tidak .num { color: #991b1b; }
+
+  /* ====== UTILS ====== */
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .mt-16 { margin-top: 16px; }
+  .hidden { display: none !important; }
+
+  /* ====== MODAL ====== */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(15,23,42,0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+    z-index: 1000;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.22s;
+  }
+  .modal-backdrop.show { opacity: 1; pointer-events: auto; }
+  .modal {
+    background: #fff;
+    border-radius: 18px;
+    width: 100%; max-width: 540px;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(12px) scale(0.97);
+    transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    max-height: 90vh;
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .modal-backdrop.show .modal { transform: translateY(0) scale(1); }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    flex-shrink: 0;
+    position: sticky; top: 0; z-index: 2;
+  }
+  .modal-header h3 { font-size: 1.05rem; color: var(--primary-dark); font-weight: 800; letter-spacing: -0.2px; }
+  .modal-close {
+    background: rgba(255,255,255,0.7);
+    border: none; font-size: 1.4rem; cursor: pointer;
+    color: var(--muted);
+    line-height: 1;
+    padding: 4px 12px;
+    border-radius: 8px;
+    transition: all 0.15s;
+  }
+  .modal-close:hover { background: #fff; color: var(--text); transform: rotate(90deg); }
+  .modal-body { padding: 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+  .modal-footer {
+    display: flex; gap: 10px; justify-content: flex-end;
+    padding: 16px 22px;
+    border-top: 1px solid var(--border);
+    background: #f8fafc;
+    flex-shrink: 0;
+    position: sticky; bottom: 0; z-index: 2;
+  }
+
+  /* ====== CHECKLIST ====== */
+  .checklist {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    max-height: 260px;
+    overflow-y: auto;
+    background: #fff;
+  }
+  .checklist-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .checklist-item:last-child { border-bottom: none; }
+  .checklist-item:hover { background: #f8fafc; }
+  .checklist-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
+  .checklist-item .item-name { flex: 1; font-size: 0.9rem; font-weight: 600; }
+
+  .checklist-actions { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  .info-box {
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border-left: 4px solid var(--primary);
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 0.86rem;
+    margin-bottom: 14px;
+    color: #3730a3;
+  }
+  .kelas-preview-box {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-radius: var(--radius-sm);
+    border: 1.5px dashed var(--border);
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+  .kelas-preview-box .label-row { font-weight: 700; margin-bottom: 5px; color: var(--primary-dark); }
+  .kelas-preview-box .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* ====== TANGGAL OPSI ====== */
+  .tanggal-opsi-list { display: flex; flex-direction: column; gap: 8px; }
+  .tanggal-opsi {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 15px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.18s;
+    background: #fff;
+    font-family: inherit;
+    text-align: left;
+  }
+  .tanggal-opsi:hover { border-color: var(--primary-light); background: #f8faff; transform: translateY(-1px); }
+  .tanggal-opsi.selected {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.12);
+  }
+  .tanggal-opsi.hari-ini {
+    border-color: var(--success);
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  }
+  .tanggal-opsi.hari-ini.selected {
+    box-shadow: 0 0 0 4px rgba(16,185,129,0.18);
+    border-color: var(--success-dark);
+  }
+  .tanggal-opsi .tanggal-utama { font-weight: 700; color: var(--text); font-size: 0.95rem; }
+  .tanggal-opsi .tanggal-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .tanggal-opsi .tanggal-badge {
+    margin-left: auto;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: #d1fae5;
+    color: #065f46;
+    white-space: nowrap;
+  }
+  .tanggal-opsi .tanggal-badge.utama { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); color: #1e40af; }
+  .tanggal-opsi .tanggal-badge.hari-ini {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(16,185,129,0.35);
+  }
+
+  /* ====== REKAP CARDS ====== */
+  .rekap-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 16px;
+    margin-top: 14px;
+  }
+  .rekap-card {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 18px;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    font-family: inherit;
+    display: flex; flex-direction: column; gap: 8px;
+    align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+    min-height: 100px;
+  }
+  .rekap-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: linear-gradient(90deg, var(--primary) 0%, #8b5cf6 50%, #d946ef 100%);
+    opacity: 0; transition: opacity 0.22s;
+  }
+  .rekap-card:hover {
+    border-color: var(--primary-light);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+  }
+  .rekap-card:hover::before { opacity: 1; }
+  .rekap-card:active { transform: translateY(0); }
+  .rekap-card .rc-title { font-size: 1.05rem; font-weight: 700; color: var(--text); line-height: 1.35; }
+
+  /* ====== REKAP DETAIL ====== */
+  .rekap-detail-section { margin-bottom: 22px; }
+  .rekap-detail-section h4 {
+    font-size: 0.95rem;
+    color: var(--text);
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 800;
+  }
+  .rekap-detail-section h4 .count-badge {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #fff;
+    padding: 2px 11px;
+    border-radius: 20px;
+    font-size: 0.74rem;
+  }
+  .rekap-detail-section.hadir h4 .count-badge { background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%); }
+  .rekap-detail-section.tidak h4 .count-badge { background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%); }
+  .rekap-list {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    max-height: 260px;
+    overflow-y: auto;
+    background: #fff;
+  }
+  .rekap-list-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+    transition: background 0.15s;
+  }
+  .rekap-list-item:hover { background: #f8fafc; }
+  .rekap-list-item:last-child { border-bottom: none; }
+  .rekap-list-item .rl-nama { flex: 1; font-weight: 600; }
+  .rekap-list-item .rl-kelas {
+    font-size: 0.72rem;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+  }
+  .rekap-list-item .rl-waktu {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .rekap-list-empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--muted);
+    font-style: italic;
+    font-size: 0.88rem;
+  }
+  .rekap-export-bar { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* ====== LOADING OVERLAY ====== */
+  .loading-overlay {
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(4px);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-radius: var(--radius);
+    z-index: 10;
+    font-size: 0.9rem;
+  }
+  .loading-spinner {
+    width: 42px; height: 42px;
+    border: 4px solid #e0e7ff;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ====== RESPONSIVE ====== */
+  @media (max-width: 640px) {
+    body { padding: 12px 10px 28px; }
+    header { padding: 22px 16px; border-radius: 12px; }
+    header h1 { font-size: 1.4rem; }
+    header p { font-size: 0.85rem; }
+    .panel { padding: 18px 14px; }
+    .panel h2 { font-size: 1.1rem; }
+    .tab-btn { font-size: 0.82rem; padding: 10px 8px; min-width: 80px; }
+    table { font-size: 0.8rem; } th, td { padding: 9px 8px; }
+    .bulk-bar .bulk-info { width: 100%; }
+    .modal { border-radius: 14px; }
+    .modal-body { padding: 16px; }
+    .modal-header, .modal-footer { padding: 14px 16px; }
+    .rekap-cards { grid-template-columns: 1fr; }
+    .kegiatan-cards { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stat-card { padding: 10px 6px; }
+    .stat-card .num { font-size: 1.3rem; }
+    .stat-card .label { font-size: 0.68rem; }
+    .conn-status { font-size: 0.7rem; padding: 6px 10px; top: 8px; right: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Connection Status -->
+<div class="conn-status syncing" id="connStatus">🔄 Menghubungkan...</div>
+
+<div class="container">
+  <header>
+    <h1>📋 Sistem Kehadiran</h1>
+    <p>Kelola kelas, peserta, kegiatan, scan QR, dan rekapan</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-target="panel-admin">⚙️ Administrasi</button>
+    <button class="tab-btn" data-target="panel-absensi">📝 Absensi</button>
+    <button class="tab-btn" data-target="panel-scan">📷 Scan QR</button>
+    <button class="tab-btn" data-target="panel-rekap">📊 Rekapan</button>
+  </div>
+
+  <section id="panel-admin" class="panel active">
+    <h2>Administrasi</h2>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btnOpenKelas">➕ Tambah Kelas</button>
+      <button class="btn btn-primary" id="btnOpenTambah">➕ Tambah Peserta</button>
+      <button class="btn btn-success" id="btnOpenExcel">📥 Upload Excel</button>
+      <button class="btn btn-secondary" id="btnDownloadTemplate">📄 Template Excel</button>
+      <button class="btn btn-danger" id="btnHapusSemuaPeserta">🗑️ Hapus Semua Peserta</button>
+    </div>
+
+    <h3 class="section-sub">📚 Daftar Kelas</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>No</th><th>Nama Kelas</th><th>Value</th><th>Jumlah Peserta</th><th>Aksi</th></tr></thead>
+        <tbody id="tbodyKelas"><tr><td colspan="5" class="empty">Belum ada kelas.</td></tr></tbody>
+      </table>
+    </div>
+
+    <h3 class="section-sub">👥 Daftar Peserta</h3>
+    <div class="search-row">
+      <div class="form-group"><label for="searchNama">🔍 Cari Nama</label><input type="text" id="searchNama" placeholder="Ketik nama peserta..." autocomplete="off"></div>
+      <div class="form-group"><label for="searchKelas">🏫 Filter Kelas</label><select id="searchKelas"><option value="all">Semua Kelas</option></select></div>
+      <button class="btn btn-secondary" id="btnResetSearch">↺ Reset</button>
+    </div>
+    <div id="searchInfo" style="font-size:0.85rem; color:var(--muted); margin-bottom:8px;"></div>
+
+    <div class="bulk-bar" id="bulkBar">
+      <span class="bulk-info" id="bulkInfo">0 peserta dipilih</span>
+      <select id="bulkKelasSelect"><option value="">— Pilih Kelas Tujuan —</option></select>
+      <button class="btn btn-primary btn-sm" id="btnBulkGantiKelas">📦 Pindahkan ke Kelas</button>
+      <button class="btn btn-secondary btn-sm" id="btnBulkPilihSemua">☑️ Pilih Semua</button>
+      <button class="btn btn-secondary btn-sm" id="btnBulkBatalPilih">✖️ Batal Pilih</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>
+          <th style="width:32px;"><input type="checkbox" id="pesertaCheckAll" style="width:16px;height:16px;cursor:pointer;"></th>
+          <th>No</th><th>ID</th><th>Nama</th><th>Kelas</th><th>Kode Akses</th><th>Aksi</th>
+        </tr></thead>
+        <tbody id="tbodyPeserta"><tr><td colspan="7" class="empty">Belum ada peserta.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="panel-absensi" class="panel">
+    <h2>Kelola Kegiatan</h2>
+    <div class="toolbar"><button class="btn btn-primary" id="btnOpenKegiatan">➕ Tambah Kegiatan</button></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>No</th><th>Nama Kegiatan</th><th>Tanggal</th><th>Peserta Wajib</th><th>Aksi</th></tr></thead>
+        <tbody id="tbodyKegiatan"><tr><td colspan="5" class="empty">Belum ada kegiatan.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="panel-scan" class="panel">
+    <h2>Scan QR Kehadiran</h2>
+    <div id="scanKegiatanCards" class="kegiatan-cards">
+      <div class="empty">Belum ada kegiatan. Tambahkan di panel Absensi.</div>
+    </div>
+  </section>
+
+  <section id="panel-rekap" class="panel">
+    <h2>Rekapan Kehadiran</h2>
+    <div id="rekapCards" class="rekap-cards">
+      <div class="empty">Belum ada kegiatan. Tambahkan di panel Absensi.</div>
+    </div>
+  </section>
+</div>
+
+<!-- MODAL KELAS -->
+<div class="modal-backdrop" id="modalKelas">
+  <div class="modal">
+    <div class="modal-header"><h3>➕ Tambah Kelas</h3><button class="modal-close" id="modalKelasClose">×</button></div>
+    <form id="formKelas">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="inputKelas">Nama Kelas</label>
+          <input type="text" id="inputKelas" placeholder="Contoh: XI RPL 1 atau 1" required autocomplete="off">
+          <small>Nama kelas menjadi <b>value</b>. Nama sama = value sama.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnBatalKelas">Batal</button>
+        <button type="submit" class="btn btn-primary">💾 Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL PESERTA -->
+<div class="modal-backdrop" id="modalTambah">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modalTitle">➕ Tambah Peserta</h3><button class="modal-close" id="modalClose">×</button></div>
+    <form id="formTambah">
+      <div class="modal-body">
+        <div class="form-group"><label for="inputNama">Nama Lengkap</label><input type="text" id="inputNama" required autocomplete="off"></div>
+        <div class="form-group"><label for="inputKode">Kode Akses</label><input type="text" id="inputKode" required autocomplete="off"><small>Kode unik per peserta.</small></div>
+        <div class="form-group"><label for="selectKelas">Kelas</label><select id="selectKelas" required><option value="">— Pilih Kelas —</option></select></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnBatalTambah">Batal</button>
+        <button type="submit" class="btn btn-primary">💾 Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL KEGIATAN -->
+<div class="modal-backdrop" id="modalKegiatan">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modalKegiatanTitle">✏️ Edit Kegiatan</h3><button class="modal-close" id="modalKegiatanClose">×</button></div>
+    <form id="formEditKegiatan">
+      <div class="modal-body">
+        <div class="form-group"><label for="editKegiatanNama">Nama Kegiatan</label><input type="text" id="editKegiatanNama" required autocomplete="off"></div>
+        <div class="form-group">
+          <label for="editKegiatanTanggal">📅 Tanggal Kegiatan</label>
+          <input type="date" id="editKegiatanTanggal" required>
+          <small>Tanggal pelaksanaan kegiatan.</small>
+        </div>
+        <div class="form-group">
+          <label>Peserta yang WAJIB Ikut</label>
+          <div class="search-row" style="margin-bottom:10px;">
+            <div class="form-group"><input type="text" id="kegiatanSearchNama" placeholder="🔍 Cari..." autocomplete="off"></div>
+            <div class="form-group"><select id="kegiatanFilterKelas"><option value="all">Semua Kelas</option></select></div>
+          </div>
+          <div class="checklist-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnPilihSemuaPesertaKegiatan">☑️ Pilih Semua (tampil)</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnBatalPilihPesertaKegiatan">✖️ Batal Pilih (tampil)</button>
+            <span id="kegiatanCheckedInfo" style="font-size:0.8rem;color:var(--primary-dark);font-weight:700;margin-left:auto;align-self:center;">✅ 0 peserta wajib dipilih</span>
+          </div>
+          <div class="checklist" id="kegiatanPesertaChecklist"><div class="empty">Belum ada peserta.</div></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnBatalKegiatan">Batal</button>
+        <button type="submit" class="btn btn-primary">💾 Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EXCEL -->
+<div class="modal-backdrop" id="modalExcel">
+  <div class="modal">
+    <div class="modal-header"><h3>📥 Upload Excel Peserta</h3><button class="modal-close" id="modalExcelClose">×</button></div>
+    <form id="formExcel">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="excelFile">Pilih File Excel</label>
+          <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" required>
+          <small>Kolom wajib: Nama, Kode Akses, Kelas.</small>
+        </div>
+        <div class="info-box" id="excelHeaderInfo" style="display:none;"></div>
+        <div id="excelPreview" class="mt-16 hidden">
+          <strong>Preview:</strong>
+          <div class="table-wrapper" style="max-height:280px;">
+            <table><thead><tr><th>Baris</th><th>ID</th><th>Nama</th><th>Kode</th><th>Kelas</th><th>Value</th><th>Status</th></tr></thead>
+            <tbody id="excelPreviewBody"></tbody></table>
+          </div>
+          <div id="excelKelasInfo" class="kelas-preview-box hidden"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnBatalExcel">Batal</button>
+        <button type="submit" class="btn btn-primary" id="btnImportExcel" disabled>📥 Import</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL PILIH TANGGAL SCAN -->
+<div class="modal-backdrop" id="modalPilihTanggal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 id="modalPilihTanggalTitle">📅 Pilih Tanggal</h3>
+      <button class="modal-close" id="modalPilihTanggalClose">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-box" id="modalPilihTanggalInfo">Pilih tanggal untuk scan kegiatan ini.</div>
+
+      <div class="form-group">
+        <label>Tanggal tersedia</label>
+        <div class="tanggal-opsi-list" id="tanggalOpsiList"></div>
+      </div>
+
+      <div class="form-group" style="margin-top:14px;">
+        <label for="inputTanggalManual">➕ Tanggal lain (opsional)</label>
+        <input type="date" id="inputTanggalManual">
+        <small>Gunakan ini jika ingin scan untuk tanggal yang belum ada di daftar.</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" id="btnBatalPilihTanggal">Batal</button>
+      <button type="button" class="btn btn-primary" id="btnLanjutScan">📷 Lanjut ke Scan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SCAN -->
+<div class="modal-backdrop" id="modalScan">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header"><h3 id="modalScanTitle">📷 Scan QR</h3><button class="modal-close" id="modalScanClose">×</button></div>
+    <div class="modal-body">
+      <div class="info-box" id="modalScanInfo">Pilih kegiatan terlebih dahulu.</div>
+      <div class="reader-wrap">
+        <div id="reader"></div>
+        <div class="scan-overlay" id="scanOverlay">✓</div>
+      </div>
+      <div class="scan-controls">
+        <button class="btn btn-success" id="btnStartCam">▶️ Mulai Kamera</button>
+        <button class="btn btn-danger" id="btnStopCam" disabled>⏹️ Hentikan</button>
+        <button class="btn btn-secondary" id="btnSwitchCam" disabled>🔄 Ganti Kamera</button>
+        <button class="btn btn-secondary" id="btnGantiTanggal">📅 Ganti Tanggal</button>
+      </div>
+      <div class="scan-status" id="scanStatus"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" id="btnKembaliScan">← Kembali</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETAIL REKAP -->
+<div class="modal-backdrop" id="modalRekapDetail">
+  <div class="modal" style="max-width:660px;">
+    <div class="modal-header">
+      <h3 id="modalRekapTitle">📊 Detail Rekap</h3>
+      <button class="modal-close" id="modalRekapClose">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="rekapDetailTanggal">📅 Pilih Tanggal Rekap</label>
+        <select id="rekapDetailTanggal"><option value="all">Semua Tanggal</option></select>
+        <small>Tanggal hari ini otomatis dipilih jika tersedia.</small>
+      </div>
+
+      <div class="stats" id="rekapDetailStats" style="margin-top:16px;">
+        <div class="stat-card"><div class="num" id="rdStatTotal">0</div><div class="label">Peserta Wajib</div></div>
+        <div class="stat-card hadir"><div class="num" id="rdStatHadir">0</div><div class="label">Hadir</div></div>
+        <div class="stat-card tidak"><div class="num" id="rdStatTidak">0</div><div class="label">Tidak Hadir</div></div>
+      </div>
+
+      <div class="rekap-detail-section hadir">
+        <h4>✅ Sudah Hadir <span class="count-badge" id="rdHadirCount">0</span></h4>
+        <div class="rekap-list" id="rdHadirList"><div class="rekap-list-empty">Belum ada yang hadir.</div></div>
+        <div class="rekap-export-bar">
+          <button type="button" class="btn btn-success btn-sm" id="btnDownloadHadir">⬇️ Download Hadir (CSV)</button>
+        </div>
+      </div>
+
+      <div class="rekap-detail-section tidak">
+        <h4>❌ Belum Hadir <span class="count-badge" id="rdTidakCount">0</span></h4>
+        <div class="rekap-list" id="rdTidakList"><div class="rekap-list-empty">Semua sudah hadir 🎉</div></div>
+        <div class="rekap-export-bar">
+          <button type="button" class="btn btn-danger btn-sm" id="btnDownloadTidak">⬇️ Download Belum Hadir (CSV)</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" id="btnRekapTutup">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<!-- QR & Excel libraries -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+<script>
+  // ====== FIREBASE INIT ======
+  const firebaseConfig = {
+    apiKey: "AIzaSyB0xoToYc2ZUZ9RAf-Nlpt_lGDCOTx2eeY",
+    authDomain: "absensi-731b2.firebaseapp.com",
+    projectId: "absensi-731b2",
+    storageBucket: "absensi-731b2.firebasestorage.app",
+    messagingSenderId: "726134801820",
+    appId: "1:726134801820:web:c3e92256db3549dacbf459",
+    measurementId: "G-5YKE3Y8L18",
+    // ⚠️ GANTI INI dengan URL Realtime Database project kamu
+    databaseURL: "https://absensi-731b2-default-rtdb.asia-southeast1.firebasedatabase.app"
+  };
+  let db = null;
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  } catch (e) {
+    console.error('Firebase init error:', e);
+  }
+  const DB_ROOT = 'absensi_data';
+
+  // ====== STATE ======
+  let kelasList = [];
+  let kegiatanList = [];
+  let peserta = [];
+  let scanLog = [];
+  let editingPesertaId = null;
+  let editingKegiatanId = null;
+  let scanKegiatanId = null;
+  let scanTanggal = null;
+  let excelParsedRows = [];
+  let searchNama = '';
+  let searchKelasId = 'all';
+
+  let _pesertaIdCounter = 0;
+
+  let kegiatanCheckedSet = new Set();
+  let kegiatanSearchNama = '';
+  let kegiatanFilterKelasId = 'all';
+
+  let pilihTanggalKegiatanId = null;
+  let pilihTanggalSelected = null;
+
+  let rekapDetailKegiatanId = null;
+  let rekapDetailTanggal = 'all';
+
+  const STORAGE_KEY = 'qr_kehadiran_data_v26';
+
+  let html5QrCode = null;
+  let isScanning = false;
+  let lastScannedText = '';
+  let lastScannedTime = 0;
+  let cameras = [];
+  let currentCameraIndex = 0;
+
+  // Firebase sync state
+  let firebaseReady = false;
+  let firebaseRef = null;
+  let isSavingToFirebase = false;
+  let pendingSaveTimeout = null;
+
+  // ====== HELPERS ======
+  function toNumId(v) { if (v === null || v === undefined || v === '') return null; const n = Number(v); return isNaN(n) ? null : Math.trunc(n); }
+  function normPesertaId(v) { if (v === null || v === undefined || v === '') return null; return String(v); }
+  function sameId(a, b) { if (a === null || a === undefined || b === null || b === undefined) return false; return String(a) === String(b); }
+  function findKegiatanById(id) { return kegiatanList.find(k => sameId(k.id, id)); }
+  function findPesertaById(id) { return peserta.find(p => sameId(p.id, id)); }
+  function generateKegiatanId() { return Date.now() * 1000 + Math.floor(Math.random() * 1000); }
+  function generatePesertaId() { _pesertaIdCounter++; return 'P' + String(_pesertaIdCounter).padStart(3, '0'); }
+  function syncPesertaIdCounter() {
+    let max = 0;
+    peserta.forEach(p => { const m = String(p.id).match(/^P(\d+)$/i); if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; } });
+    _pesertaIdCounter = max;
+  }
+  function isPesertaWajibIkut(pesertaId, kegiatanId) {
+    const k = findKegiatanById(kegiatanId);
+    if (!k) return false;
+    if (!Array.isArray(k.pesertaIds)) return false;
+    return k.pesertaIds.some(id => sameId(id, pesertaId));
+  }
+
+  function cleanText(v) {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'number') { if (!isFinite(v)) return ''; return String(v); }
+    let s = String(v);
+    s = s.replace(/[\u00A0\u2007\u202F]/g, ' ');
+    s = s.replace(/[\u200B-\u200D\uFEFF]/g, '');
+    s = s.replace(/[\r\n\t\v\f]+/g, ' ');
+    s = s.replace(/[\u0000-\u001F\u007F]/g, '');
+    s = s.replace(/\s+/g, ' ');
+    return s.trim();
+  }
+  function normalizeKelasName(v) {
+    let s = cleanText(v);
+    s = s.replace(/[-_]+/g, ' ');
+    s = s.replace(/\s+/g, ' ').trim();
+    s = s.split(' ').map(w => {
+      if (!w) return w;
+      if (/^\d+$/.test(w)) return w;
+      if (/^[IVXLCDM]+$/i.test(w)) return w.toUpperCase();
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    }).join(' ');
+    return s;
+  }
+  function findKelasNama(nama) {
+    const key = normalizeKelasName(nama).toLowerCase();
+    return kelasList.find(k => k.toLowerCase() === key) || null;
+  }
+  function ensureKelas(namaRaw) {
+    const nama = normalizeKelasName(namaRaw);
+    if (!nama) return null;
+    const existing = findKelasNama(nama);
+    if (existing) return existing;
+    kelasList.push(nama);
+    return nama;
+  }
+  function getKelasNama(kelas) { return kelas || '-'; }
+
+  // ====== TANGGAL ======
+  function formatTanggal(isoDate) {
+    if (!isoDate) return '-';
+    const m = String(isoDate).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return isoDate;
+    return `${m[3]}/${m[2]}/${m[1]}`;
+  }
+  function todayISO() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function labelKegiatan(k) {
+    if (!k) return '-';
+    return `${k.nama} (${formatTanggal(k.tanggal)})`;
+  }
+  function kehadiranKey(kegiatanId, tanggal) {
+    return String(kegiatanId) + '|' + tanggal;
+  }
+  function getTanggalList(k) {
+    if (!k) return [];
+    const set = new Set();
+    if (k.tanggal) set.add(k.tanggal);
+    (k.tanggalTambahan || []).forEach(t => { if (t) set.add(t); });
+    peserta.forEach(p => {
+      Object.keys(p.kehadiran || {}).forEach(key => {
+        const [kid, tgl] = key.split('|');
+        if (sameId(kid, k.id) && tgl) set.add(tgl);
+      });
+    });
+    return [...set].sort();
+  }
+  function hitungHadirPadaTanggal(k, tanggal) {
+    if (!k || !tanggal) return 0;
+    const key = kehadiranKey(k.id, tanggal);
+    return peserta.filter(p =>
+      (k.pesertaIds || []).some(id => sameId(id, p.id)) &&
+      (p.kehadiran[key] || {}).hadir
+    ).length;
+  }
+  function hitungHadirUnik(k) {
+    if (!k) return 0;
+    const tglList = getTanggalList(k);
+    return (k.pesertaIds || []).filter(pid => {
+      const p = findPesertaById(pid);
+      if (!p) return false;
+      return tglList.some(t => (p.kehadiran[kehadiranKey(k.id, t)] || {}).hadir);
+    }).length;
+  }
+  function isHariIni(tgl) { return tgl === todayISO(); }
+
+  // ====== CONNECTION STATUS ======
+  function setConnStatus(state, text) {
+    const el = document.getElementById('connStatus');
+    if (!el) return;
+    el.className = 'conn-status ' + state;
+    el.textContent = text;
+  }
+
+  // ====== FIREBASE: LOAD / SAVE ======
+  function migrateKehadiranData(data) {
+    const kegListRaw = data.kegiatanList || [];
+    const pesertaBaru = (data.peserta || []).map(p => {
+      const kehadiranBaru = {};
+      Object.keys(p.kehadiran || {}).forEach(key => {
+        if (key.includes('|')) {
+          kehadiranBaru[key] = p.kehadiran[key];
+        } else {
+          const keg = kegListRaw.find(x => sameId(x.id, key));
+          const tgl = keg ? (keg.tanggal || todayISO()) : todayISO();
+          kehadiranBaru[kehadiranKey(key, tgl)] = p.kehadiran[key];
+        }
+      });
+      return {
+        id: String(p.id),
+        nama: String(p.nama || ''),
+        kode: String(p.kode || '').trim(),
+        kelas: p.kelas ? normalizeKelasName(p.kelas) : '',
+        kehadiran: kehadiranBaru
+      };
+    });
+
+    const kegiatanBaru = kegListRaw.map(k => ({
+      id: (k.id != null && !isNaN(Number(k.id))) ? Math.trunc(Number(k.id)) : generateKegiatanId(),
+      nama: String(k.nama || ''),
+      tanggal: (k.tanggal && /^\d{4}-\d{2}-\d{2}/.test(k.tanggal)) ? k.tanggal.slice(0, 10) : todayISO(),
+      pesertaIds: Array.isArray(k.pesertaIds)
+        ? [...new Set(k.pesertaIds.map(x => normPesertaId(x)).filter(x => x !== null))]
+        : [],
+      tanggalTambahan: Array.isArray(k.tanggalTambahan) ? [...new Set(k.tanggalTambahan.filter(Boolean))] : []
+    }));
+
+    const kelasBaru = (data.kelasList || [])
+      .map(k => typeof k === 'string' ? normalizeKelasName(k) : normalizeKelasName(k.nama))
+      .filter(Boolean);
+    const kelasUniq = [...new Set(kelasBaru)];
+
+    const logBaru = (data.scanLog || []).map(s => ({
+      waktu: s.waktu || '', nama: s.nama || '', kode: s.kode || '',
+      kelas: s.kelas || '', kegiatan: s.kegiatan || '', tanggal: s.tanggal || ''
+    }));
+
+    return { kelasList: kelasUniq, kegiatanList: kegiatanBaru, peserta: pesertaBaru, scanLog: logBaru };
+  }
+
+  function applyDataToState(data) {
+    const migrated = migrateKehadiranData(data || {});
+    kelasList = migrated.kelasList;
+    kegiatanList = migrated.kegiatanList;
+    peserta = migrated.peserta;
+    scanLog = migrated.scanLog;
+    syncPesertaIdCounter();
+  }
+
+  function loadDataFromFirebase() {
+    return new Promise((resolve) => {
+      if (!db) {
+        // Fallback ke localStorage jika Firebase tidak siap
+        try {
+          const rawLocal = localStorage.getItem(STORAGE_KEY);
+          if (rawLocal) applyDataToState(JSON.parse(rawLocal));
+        } catch (e) {}
+        firebaseReady = true;
+        resolve(false);
+        return;
+      }
+      firebaseRef = db.ref(DB_ROOT);
+      setConnStatus('syncing', '🔄 Memuat data...');
+      firebaseRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        setConnStatus('online', '🟢 Online');
+        if (data && (data.kelasList || data.peserta || data.kegiatanList)) {
+          if (isSavingToFirebase) return;
+          applyDataToState(data);
+          firebaseReady = true;
+          if (typeof refreshAllUI === 'function') refreshAllUI();
+          resolve(true);
+        } else {
+          // Database kosong → migrasi dari localStorage jika ada
+          const rawLocal = localStorage.getItem(STORAGE_KEY);
+          if (rawLocal) {
+            try {
+              const localData = JSON.parse(rawLocal);
+              applyDataToState(localData);
+              firebaseRef.set({
+                kelasList, kegiatanList, peserta, scanLog,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+              });
+              firebaseReady = true;
+              resolve(true);
+            } catch (e) {
+              console.warn('Migrasi lokal gagal', e);
+              firebaseReady = true;
+              resolve(false);
+            }
+          } else {
+            firebaseReady = true;
+            resolve(true);
+          }
+        }
+      }, (error) => {
+        console.error('Firebase load error:', error);
+        setConnStatus('offline', '🔴 Offline (lokal)');
+        try {
+          const rawLocal = localStorage.getItem(STORAGE_KEY);
+          if (rawLocal) applyDataToState(JSON.parse(rawLocal));
+        } catch (e) {}
+        firebaseReady = true;
+        resolve(false);
+      });
+    });
+  }
+
+  // Debounced save
+  function saveData() {
+    if (!firebaseReady) { console.warn('Firebase belum siap, save diabaikan'); return; }
+    // Tetap simpan ke localStorage sebagai backup
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ kelasList, kegiatanList, peserta, scanLog }));
+    } catch (e) {}
+
+    if (pendingSaveTimeout) clearTimeout(pendingSaveTimeout);
+    setConnStatus('syncing', '🔄 Menyimpan...');
+    pendingSaveTimeout = setTimeout(() => {
+      if (!firebaseRef) firebaseRef = db.ref(DB_ROOT);
+      isSavingToFirebase = true;
+      firebaseRef.set({
+        kelasList: kelasList,
+        kegiatanList: kegiatanList,
+        peserta: peserta,
+        scanLog: scanLog,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      }).then(() => {
+        isSavingToFirebase = false;
+        setConnStatus('online', '🟢 Tersimpan');
+      }).catch((err) => {
+        isSavingToFirebase = false;
+        setConnStatus('offline', '🔴 Gagal simpan');
+        console.error('Firebase save error:', err);
+        alert('⚠️ Gagal sinkron ke server. Data tersimpan lokal. Cek koneksi & rules Firebase.');
+      });
+    }, 400);
+  }
+
+  // ====== TABS ======
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.target).classList.add('active');
+      const target = btn.dataset.target;
+      if (target === 'panel-rekap') renderRekapCards();
+      if (target === 'panel-scan') renderScanKegiatanCards();
+      if (target !== 'panel-scan' && isScanning) stopCamera();
+    });
+  });
+
+  // ====== MODAL KELAS ======
+  const modalKelas = document.getElementById('modalKelas');
+  const inputKelas = document.getElementById('inputKelas');
+  const formKelas = document.getElementById('formKelas');
+  function openModalKelas() { formKelas.reset(); modalKelas.classList.add('show'); setTimeout(() => inputKelas.focus(), 80); }
+  function closeModalKelas() { modalKelas.classList.remove('show'); }
+  document.getElementById('btnOpenKelas').addEventListener('click', openModalKelas);
+  document.getElementById('modalKelasClose').addEventListener('click', closeModalKelas);
+  document.getElementById('btnBatalKelas').addEventListener('click', closeModalKelas);
+  modalKelas.addEventListener('click', e => { if (e.target === modalKelas) closeModalKelas(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalKelas.classList.contains('show')) closeModalKelas(); });
+
+  formKelas.addEventListener('submit', e => {
+    e.preventDefault();
+    const nama = normalizeKelasName(inputKelas.value);
+    if (!nama) { alert('Nama kelas tidak boleh kosong.'); return; }
+    const existing = findKelasNama(nama);
+    if (existing) { alert(`Kelas "${existing}" sudah ada.`); closeModalKelas(); return; }
+    kelasList.push(nama); saveData(); renderKelas(); updateAllOptions(); closeModalKelas();
+    alert(`✅ Kelas "${nama}" ditambahkan.`);
+  });
+
+  // ====== MODAL KEGIATAN ======
+  const modalKegiatan = document.getElementById('modalKegiatan');
+  const modalKegiatanTitle = document.getElementById('modalKegiatanTitle');
+  const editKegiatanNama = document.getElementById('editKegiatanNama');
+  const editKegiatanTanggal = document.getElementById('editKegiatanTanggal');
+  const kegiatanPesertaChecklist = document.getElementById('kegiatanPesertaChecklist');
+  const formEditKegiatan = document.getElementById('formEditKegiatan');
+
+  function renderKegiatanChecklistList() {
+    const wrap = document.getElementById('kegiatanPesertaChecklist');
+    const kelasSelect = document.getElementById('kegiatanFilterKelas');
+    if (kelasSelect) {
+      const cur = kelasSelect.value || 'all';
+      kelasSelect.innerHTML = '<option value="all">Semua Kelas</option>' + kelasList.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
+      kelasSelect.value = (cur === 'all' || kelasList.includes(cur)) ? cur : 'all';
+      kegiatanFilterKelasId = kelasSelect.value;
+    }
+    if (peserta.length === 0) { wrap.innerHTML = '<div class="empty">Belum ada peserta.</div>'; updateKegiatanCheckedInfo(); return; }
+    const q = kegiatanSearchNama.trim().toLowerCase();
+    let filtered = peserta;
+    if (q) filtered = filtered.filter(p => p.nama.toLowerCase().includes(q) || String(p.id).toLowerCase().includes(q) || p.kode.toLowerCase().includes(q));
+    if (kegiatanFilterKelasId !== 'all') filtered = filtered.filter(p => p.kelas === kegiatanFilterKelasId);
+    if (filtered.length === 0) { wrap.innerHTML = '<div class="empty">Tidak ada peserta cocok.</div>'; updateKegiatanCheckedInfo(); return; }
+    filtered = [...filtered].sort((a, b) => {
+      const aCek = kegiatanCheckedSet.has(String(a.id)) ? 0 : 1;
+      const bCek = kegiatanCheckedSet.has(String(b.id)) ? 0 : 1;
+      if (aCek !== bCek) return aCek - bCek;
+      return a.nama.localeCompare(b.nama);
+    });
+    wrap.innerHTML = filtered.map(p => `
+      <label class="checklist-item">
+        <input type="checkbox" value="${p.id}" ${kegiatanCheckedSet.has(String(p.id)) ? 'checked' : ''}>
+        <span class="item-name">${escapeHtml(p.nama)}</span>
+        <span class="id-chip">${escapeHtml(p.id)}</span>
+        <span class="class-chip">${escapeHtml(getKelasNama(p.kelas))}</span>
+      </label>
+    `).join('');
+    wrap.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const id = normPesertaId(cb.value);
+        if (id === null) return;
+        if (cb.checked) kegiatanCheckedSet.add(String(id)); else kegiatanCheckedSet.delete(String(id));
+        updateKegiatanCheckedInfo();
+      });
+    });
+    updateKegiatanCheckedInfo();
+  }
+  function updateKegiatanCheckedInfo() {
+    const info = document.getElementById('kegiatanCheckedInfo');
+    if (info) info.textContent = `✅ ${kegiatanCheckedSet.size} peserta wajib dipilih`;
+  }
+  function renderKegiatanPesertaChecklist(checkedIds = []) {
+    kegiatanCheckedSet = new Set(checkedIds.map(x => normPesertaId(x)).filter(x => x !== null).map(x => String(x)));
+    kegiatanSearchNama = ''; kegiatanFilterKelasId = 'all';
+    const searchInput = document.getElementById('kegiatanSearchNama');
+    if (searchInput) searchInput.value = '';
+    const kelasSelect = document.getElementById('kegiatanFilterKelas');
+    if (kelasSelect) kelasSelect.value = 'all';
+    renderKegiatanChecklistList();
+  }
+  function openModalKegiatan(editId = null) {
+    editingKegiatanId = editId;
+    formEditKegiatan.reset();
+    editKegiatanNama.value = '';
+    editKegiatanTanggal.value = '';
+    kegiatanPesertaChecklist.innerHTML = '';
+    if (editId != null) {
+      const k = findKegiatanById(editId);
+      if (!k) { editingKegiatanId = null; modalKegiatanTitle.textContent = '➕ Tambah Kegiatan'; editKegiatanTanggal.value = todayISO(); renderKegiatanPesertaChecklist([]); }
+      else {
+        modalKegiatanTitle.textContent = '✏️ Edit Kegiatan';
+        editKegiatanNama.value = k.nama;
+        editKegiatanTanggal.value = k.tanggal || todayISO();
+        renderKegiatanPesertaChecklist(k.pesertaIds || []);
+      }
+    } else {
+      modalKegiatanTitle.textContent = '➕ Tambah Kegiatan';
+      editKegiatanTanggal.value = todayISO();
+      renderKegiatanPesertaChecklist([]);
+    }
+    modalKegiatan.classList.add('show');
+    setTimeout(() => editKegiatanNama.focus(), 80);
+  }
+  function closeModalKegiatan() {
+    modalKegiatan.classList.remove('show');
+    editingKegiatanId = null;
+    formEditKegiatan.reset();
+    editKegiatanNama.value = '';
+    editKegiatanTanggal.value = '';
+    kegiatanPesertaChecklist.innerHTML = '';
+    kegiatanCheckedSet = new Set();
+    kegiatanSearchNama = '';
+    kegiatanFilterKelasId = 'all';
+  }
+  document.getElementById('btnOpenKegiatan').addEventListener('click', () => openModalKegiatan());
+  document.getElementById('modalKegiatanClose').addEventListener('click', closeModalKegiatan);
+  document.getElementById('btnBatalKegiatan').addEventListener('click', closeModalKegiatan);
+  modalKegiatan.addEventListener('click', e => { if (e.target === modalKegiatan) closeModalKegiatan(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalKegiatan.classList.contains('show')) closeModalKegiatan(); });
+
+  document.getElementById('kegiatanSearchNama').addEventListener('input', e => { kegiatanSearchNama = e.target.value; renderKegiatanChecklistList(); });
+  document.getElementById('kegiatanFilterKelas').addEventListener('change', e => { kegiatanFilterKelasId = e.target.value; renderKegiatanChecklistList(); });
+  document.getElementById('btnPilihSemuaPesertaKegiatan').addEventListener('click', () => {
+    document.querySelectorAll('#kegiatanPesertaChecklist input[type="checkbox"]').forEach(cb => { cb.checked = true; const id = normPesertaId(cb.value); if (id !== null) kegiatanCheckedSet.add(String(id)); });
+    updateKegiatanCheckedInfo();
+  });
+  document.getElementById('btnBatalPilihPesertaKegiatan').addEventListener('click', () => {
+    document.querySelectorAll('#kegiatanPesertaChecklist input[type="checkbox"]').forEach(cb => { cb.checked = false; const id = normPesertaId(cb.value); if (id !== null) kegiatanCheckedSet.delete(String(id)); });
+    updateKegiatanCheckedInfo();
+  });
+
+  formEditKegiatan.addEventListener('submit', e => {
+    e.preventDefault();
+    const namaBaru = editKegiatanNama.value.trim();
+    const tanggalBaru = editKegiatanTanggal.value;
+    if (!namaBaru) { alert('Nama kegiatan tidak boleh kosong.'); return; }
+    if (!tanggalBaru) { alert('Tanggal kegiatan wajib diisi.'); return; }
+    if (kegiatanList.some(x => !sameId(x.id, editingKegiatanId) && x.nama.trim().toLowerCase() === namaBaru.toLowerCase() && x.tanggal === tanggalBaru)) {
+      alert('Kegiatan dengan nama & tanggal sama sudah ada.'); return;
+    }
+    const checkedIds = [...kegiatanCheckedSet];
+    if (editingKegiatanId != null) {
+      const k = findKegiatanById(editingKegiatanId);
+      if (!k) { alert('Kegiatan tidak ditemukan.'); closeModalKegiatan(); return; }
+      const namaLama = k.nama;
+      k.nama = namaBaru;
+      k.tanggal = tanggalBaru;
+      const pesertaLama = new Set((k.pesertaIds || []).map(id => String(id)));
+      const pesertaBaru = new Set(checkedIds.map(id => String(id)));
+      pesertaLama.forEach(pidStr => {
+        if (!pesertaBaru.has(pidStr)) {
+          const p = peserta.find(x => String(x.id) === pidStr);
+          if (p) {
+            Object.keys(p.kehadiran || {}).forEach(key => {
+              const [kid] = key.split('|');
+              if (sameId(kid, k.id)) delete p.kehadiran[key];
+            });
+            scanLog = scanLog.filter(s => !(s.kode === p.kode && s.kegiatan && s.kegiatan.startsWith(namaLama)));
+          }
+        }
+      });
+      k.pesertaIds = checkedIds;
+      if (namaLama !== namaBaru) scanLog.forEach(s => { if (s.kegiatan && s.kegiatan.startsWith(namaLama)) s.kegiatan = s.kegiatan.replace(namaLama, namaBaru); });
+    } else {
+      kegiatanList.push({ id: generateKegiatanId(), nama: namaBaru, tanggal: tanggalBaru, pesertaIds: checkedIds, tanggalTambahan: [] });
+    }
+    saveData();
+    renderKegiatan(); renderPeserta(); updateAllOptions(); renderRekapCards(); renderScanKegiatanCards();
+    closeModalKegiatan();
+  });
+
+  window.editKegiatan = function(id) { openModalKegiatan(id); };
+
+  window.hapusKegiatan = function(id) {
+    const k = findKegiatanById(id);
+    if (!k) return;
+    const jumlah = (k.pesertaIds || []).length;
+    const msg = jumlah > 0 ? `Kegiatan "${labelKegiatan(k)}" masih diwajibkan untuk ${jumlah} peserta. Hapus?` : `Hapus kegiatan "${labelKegiatan(k)}"?`;
+    if (!confirm(msg)) return;
+    peserta.forEach(p => {
+      Object.keys(p.kehadiran || {}).forEach(key => {
+        const [kid] = key.split('|');
+        if (sameId(kid, id)) delete p.kehadiran[key];
+      });
+    });
+    scanLog = scanLog.filter(s => s.kegiatan !== k.nama && !(s.kegiatan && s.kegiatan.startsWith(k.nama + ' ')));
+    kegiatanList = kegiatanList.filter(x => !sameId(x.id, id));
+    if (sameId(scanKegiatanId, id)) { if (modalScan.classList.contains('show')) closeModalScan(); scanKegiatanId = null; }
+    if (sameId(rekapDetailKegiatanId, id)) closeModalRekapDetail();
+    saveData();
+    renderKegiatan(); renderPeserta(); updateAllOptions(); renderRekapCards(); renderScanKegiatanCards();
+  };
+
+  // ====== RENDER KELAS ======
+  function renderKelas() {
+    const tbody = document.getElementById('tbodyKelas');
+    if (kelasList.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Belum ada kelas.</td></tr>'; return; }
+    tbody.innerHTML = kelasList.map((nama, i) => {
+      const jumlah = peserta.filter(p => p.kelas === nama).length;
+      const bisaHapus = jumlah === 0;
+      return `
+        <tr>
+          <td>${i + 1}</td><td>${escapeHtml(nama)}</td>
+          <td><span class="kelas-value-chip">${escapeHtml(nama)}</span></td>
+          <td>${jumlah}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="hapusKelas('${escapeJs(nama)}')" ${bisaHapus ? '' : 'disabled'}>🗑️ Hapus</button></td>
+        </tr>
+      `;
+    }).join('');
+  }
+  window.hapusKelas = function(nama) {
+    const jumlah = peserta.filter(p => p.kelas === nama).length;
+    if (jumlah > 0) { alert(`Kelas "${nama}" masih memiliki ${jumlah} peserta.`); return; }
+    if (!confirm(`Hapus kelas "${nama}"?`)) return;
+    kelasList = kelasList.filter(k => k !== nama);
+    if (searchKelasId === nama) { searchKelasId = 'all'; document.getElementById('searchKelas').value = 'all'; }
+    saveData(); renderKelas(); renderPeserta(); renderKegiatan(); updateAllOptions(); renderRekapCards();
+  };
+
+  // ====== RENDER KEGIATAN ======
+  function renderKegiatan() {
+    const tbody = document.getElementById('tbodyKegiatan');
+    if (kegiatanList.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Belum ada kegiatan.</td></tr>'; return; }
+    const sorted = [...kegiatanList].sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
+    tbody.innerHTML = sorted.map((k, i) => {
+      const jumlahWajib = (k.pesertaIds || []).length;
+      const totalTgl = getTanggalList(k).length;
+      return `
+        <tr>
+          <td>${i + 1}</td><td>${escapeHtml(k.nama)}</td>
+          <td><span class="tanggal-chip">📅 ${escapeHtml(formatTanggal(k.tanggal))}</span>${totalTgl > 1 ? `<br><small style="color:var(--muted);">+${totalTgl - 1} tanggal lain</small>` : ''}</td>
+          <td>${jumlahWajib}</td>
+          <td><div class="action-btns">
+            <button class="btn btn-primary btn-sm" onclick="editKegiatan(${k.id})">✏️ Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="hapusKegiatan(${k.id})">🗑️ Hapus</button>
+          </div></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ====== UPDATE ALL OPTIONS ======
+  function updateAllOptions() {
+    const optsKelas = kelasList.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
+    const selKelas = document.getElementById('selectKelas');
+    const curKelas = selKelas.value;
+    selKelas.innerHTML = '<option value="">— Pilih Kelas —</option>' + optsKelas;
+    if (curKelas && kelasList.includes(curKelas)) selKelas.value = curKelas;
+
+    const selSearch = document.getElementById('searchKelas');
+    selSearch.innerHTML = '<option value="all">Semua Kelas</option>' + optsKelas;
+    if (searchKelasId === 'all' || kelasList.includes(searchKelasId)) selSearch.value = searchKelasId;
+    else { searchKelasId = 'all'; selSearch.value = 'all'; }
+
+    const selBulk = document.getElementById('bulkKelasSelect');
+    const curBulk = selBulk.value;
+    selBulk.innerHTML = '<option value="">— Pilih Kelas Tujuan —</option>' + optsKelas;
+    if (curBulk && kelasList.includes(curBulk)) selBulk.value = curBulk;
+
+    if (document.getElementById('scanKegiatanCards')) renderScanKegiatanCards();
+  }
+
+  // ====== MODAL PESERTA ======
+  const modalTambah = document.getElementById('modalTambah');
+  const modalTitle = document.getElementById('modalTitle');
+  const inputNama = document.getElementById('inputNama');
+  const inputKode = document.getElementById('inputKode');
+  const selectKelas = document.getElementById('selectKelas');
+  const formTambah = document.getElementById('formTambah');
+
+  function openModal(editId = null) {
+    if (kelasList.length === 0) { alert('Tambahkan kelas dulu.'); return; }
+    formTambah.reset(); editingPesertaId = editId; updateAllOptions();
+    if (editId != null) {
+      const p = findPesertaById(editId);
+      if (!p) { editingPesertaId = null; modalTitle.textContent = '➕ Tambah Peserta'; }
+      else {
+        modalTitle.textContent = '✏️ Edit Peserta (' + p.id + ')';
+        inputNama.value = p.nama; inputKode.value = p.kode;
+        if (p.kelas && kelasList.includes(p.kelas)) selectKelas.value = p.kelas;
+        else selectKelas.value = '';
+      }
+    } else { modalTitle.textContent = '➕ Tambah Peserta'; }
+    modalTambah.classList.add('show');
+    setTimeout(() => inputNama.focus(), 80);
+  }
+  function closeModal() { modalTambah.classList.remove('show'); editingPesertaId = null; formTambah.reset(); }
+  document.getElementById('btnOpenTambah').addEventListener('click', () => openModal());
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('btnBatalTambah').addEventListener('click', closeModal);
+  modalTambah.addEventListener('click', e => { if (e.target === modalTambah) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalTambah.classList.contains('show')) closeModal(); });
+
+  formTambah.addEventListener('submit', e => {
+    e.preventDefault();
+    const nama = inputNama.value.trim();
+    const kode = inputKode.value.trim();
+    const kelas = selectKelas.value;
+    if (!nama || !kode || !kelas) { alert('Lengkapi data.'); return; }
+    const kelasKanonik = findKelasNama(kelas);
+    if (!kelasKanonik) { alert('Kelas tidak valid.'); return; }
+    if (peserta.some(p => !sameId(p.id, editingPesertaId) && p.kode.toLowerCase() === kode.toLowerCase())) { alert('Kode akses sudah dipakai.'); return; }
+    if (editingPesertaId != null) {
+      const p = findPesertaById(editingPesertaId);
+      if (p) { p.nama = nama; p.kode = kode; p.kelas = kelasKanonik; }
+      else peserta.push({ id: generatePesertaId(), nama, kode, kelas: kelasKanonik, kehadiran: {} });
+    } else {
+      peserta.push({ id: generatePesertaId(), nama, kode, kelas: kelasKanonik, kehadiran: {} });
+    }
+    saveData(); renderPeserta(); renderKelas(); renderKegiatan(); renderRekapCards(); renderScanKegiatanCards();
+    closeModal();
+  });
+
+  document.getElementById('btnHapusSemuaPeserta').addEventListener('click', () => {
+    if (peserta.length === 0) return;
+    if (!confirm('Hapus semua peserta dan log scan?')) return;
+    if (!confirm('Konfirmasi sekali lagi: SEMUA data hilang permanen. Lanjutkan?')) return;
+    peserta = []; scanLog = []; kegiatanList.forEach(k => { k.pesertaIds = []; });
+    _pesertaIdCounter = 0;
+    saveData(); renderPeserta(); renderKelas(); renderKegiatan(); renderRekapCards(); renderScanKegiatanCards();
+  });
+
+  // ====== RENDER PESERTA ======
+  function renderPeserta() {
+    const tbody = document.getElementById('tbodyPeserta');
+    const info = document.getElementById('searchInfo');
+    const ca = document.getElementById('pesertaCheckAll');
+    if (ca) ca.checked = false;
+    if (peserta.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Belum ada peserta.</td></tr>'; info.textContent = ''; updateBulkInfo(); return; }
+    const q = searchNama.trim().toLowerCase();
+    let filtered = peserta;
+    if (q) filtered = filtered.filter(p => p.nama.toLowerCase().includes(q) || String(p.id).toLowerCase().includes(q) || p.kode.toLowerCase().includes(q));
+    if (searchKelasId !== 'all') filtered = filtered.filter(p => p.kelas === searchKelasId);
+    if (q || searchKelasId !== 'all') info.textContent = `Menampilkan ${filtered.length} dari ${peserta.length} peserta.`;
+    else info.textContent = '';
+    if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Tidak ada peserta cocok.</td></tr>'; updateBulkInfo(); return; }
+    tbody.innerHTML = filtered.map(p => {
+      const idx = peserta.indexOf(p) + 1;
+      return `
+        <tr>
+          <td><input type="checkbox" class="peserta-checkbox" data-id="${p.id}" style="width:16px;height:16px;cursor:pointer;"></td>
+          <td>${idx}</td><td><span class="id-chip">${escapeHtml(p.id)}</span></td>
+          <td>${escapeHtml(p.nama)}</td>
+          <td><span class="class-chip">${escapeHtml(getKelasNama(p.kelas))}</span></td>
+          <td><span class="code-chip">${escapeHtml(p.kode)}</span></td>
+          <td><div class="action-btns">
+            <button class="btn btn-primary btn-sm" onclick="openModal('${escapeJs(p.id)}')">✏️ Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="hapusPeserta('${escapeJs(p.id)}')">🗑️ Hapus</button>
+          </div></td>
+        </tr>
+      `;
+    }).join('');
+    tbody.querySelectorAll('.peserta-checkbox').forEach(cb => { cb.checked = false; cb.addEventListener('change', updateBulkInfo); });
+    if (ca) { ca.checked = false; ca.onchange = () => { document.querySelectorAll('.peserta-checkbox').forEach(cb => cb.checked = ca.checked); updateBulkInfo(); }; }
+    updateBulkInfo();
+  }
+  function getPesertaCheckedIds() {
+    const ids = [];
+    document.querySelectorAll('.peserta-checkbox:checked').forEach(cb => { const v = normPesertaId(cb.dataset.id); if (v !== null) ids.push(v); });
+    return [...new Set(ids)];
+  }
+  function updateBulkInfo() {
+    const count = getPesertaCheckedIds().length;
+    document.getElementById('bulkInfo').textContent = count > 0 ? `${count} peserta dipilih` : '0 peserta dipilih';
+  }
+  document.getElementById('searchNama').addEventListener('input', e => { searchNama = e.target.value; renderPeserta(); });
+  document.getElementById('searchKelas').addEventListener('change', e => { searchKelasId = e.target.value; renderPeserta(); });
+  document.getElementById('btnResetSearch').addEventListener('click', () => {
+    document.getElementById('searchNama').value = ''; document.getElementById('searchKelas').value = 'all';
+    searchNama = ''; searchKelasId = 'all'; renderPeserta();
+  });
+  document.getElementById('btnBulkPilihSemua').addEventListener('click', () => { document.querySelectorAll('.peserta-checkbox').forEach(cb => cb.checked = true); const ca = document.getElementById('pesertaCheckAll'); if (ca) ca.checked = true; updateBulkInfo(); });
+  document.getElementById('btnBulkBatalPilih').addEventListener('click', () => { document.querySelectorAll('.peserta-checkbox').forEach(cb => cb.checked = false); const ca = document.getElementById('pesertaCheckAll'); if (ca) ca.checked = false; updateBulkInfo(); });
+
+  document.getElementById('btnBulkGantiKelas').addEventListener('click', () => {
+    const ids = getPesertaCheckedIds();
+    if (ids.length === 0) { alert('Pilih peserta dulu.'); return; }
+    const targetKelas = document.getElementById('bulkKelasSelect').value;
+    if (!targetKelas) { alert('Pilih kelas tujuan.'); return; }
+    if (!kelasList.includes(targetKelas)) { alert('Kelas tujuan tidak valid.'); return; }
+    const selectedPeserta = ids.map(id => findPesertaById(id)).filter(Boolean);
+    const akanDipindah = selectedPeserta.filter(p => p.kelas !== targetKelas);
+    if (akanDipindah.length === 0) { alert(`Semua peserta sudah di kelas "${targetKelas}".`); return; }
+    if (!confirm(`Pindahkan ${akanDipindah.length} peserta ke kelas "${targetKelas}"?`)) return;
+    akanDipindah.forEach(p => { p.kelas = targetKelas; });
+    saveData();
+    searchNama = ''; searchKelasId = 'all';
+    document.getElementById('searchNama').value = ''; document.getElementById('searchKelas').value = 'all';
+    renderKelas(); renderPeserta(); renderKegiatan(); renderRekapCards(); updateAllOptions();
+    document.getElementById('bulkKelasSelect').value = '';
+    const ca = document.getElementById('pesertaCheckAll'); if (ca) ca.checked = false;
+    alert(`✅ ${akanDipindah.length} peserta dipindahkan.`);
+  });
+
+  window.hapusPeserta = function(id) {
+    const p = findPesertaById(id);
+    if (!p) return;
+    if (!confirm(`Hapus peserta [${p.id}] ${p.nama}?`)) return;
+    peserta = peserta.filter(x => !sameId(x.id, id));
+    kegiatanList.forEach(k => { k.pesertaIds = (k.pesertaIds || []).filter(x => !sameId(x, id)); });
+    if (sameId(editingPesertaId, id)) editingPesertaId = null;
+    saveData(); renderPeserta(); renderKelas(); renderKegiatan(); renderRekapCards();
+  };
+  window.openModal = openModal;
+
+  // ====== TEMPLATE ======
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function downloadTemplateCSV() {
+    const rows = [['Nama', 'Kode Akses', 'Kelas'], ['Budi Santoso', 'BUDI01', '1'], ['Siti Aminah', 'SITI02', '2'], ['Ahmad Fauzi', 'AHMAD03', '2']];
+    const csv = '\uFEFF' + rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), 'template_peserta.csv');
+    alert('Template CSV diunduh.');
+  }
+  document.getElementById('btnDownloadTemplate').addEventListener('click', () => {
+    if (typeof XLSX === 'undefined') { downloadTemplateCSV(); return; }
+    try {
+      const wsData = [['Nama', 'Kode Akses', 'Kelas'], ['Budi Santoso', 'BUDI01', '1'], ['Siti Aminah', 'SITI02', '2'], ['Ahmad Fauzi', 'AHMAD03', '2']];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 20 }];
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Peserta');
+      if (typeof XLSX.writeFile === 'function') XLSX.writeFile(wb, 'template_peserta.xlsx');
+      else {
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        triggerDownload(new Blob([wbout], { type: 'application/octet-stream' }), 'template_peserta.xlsx');
+      }
+    } catch (err) { console.error(err); downloadTemplateCSV(); }
+  });
+
+  // ====== EXCEL ======
+  const modalExcel = document.getElementById('modalExcel');
+  const excelFile = document.getElementById('excelFile');
+  const excelPreview = document.getElementById('excelPreview');
+  const excelPreviewBody = document.getElementById('excelPreviewBody');
+  const excelKelasInfo = document.getElementById('excelKelasInfo');
+  const excelHeaderInfo = document.getElementById('excelHeaderInfo');
+  const btnImportExcel = document.getElementById('btnImportExcel');
+  const formExcel = document.getElementById('formExcel');
+
+  function openModalExcel() {
+    formExcel.reset(); excelFile.value = ''; excelParsedRows = [];
+    excelPreview.classList.add('hidden'); excelPreviewBody.innerHTML = '';
+    excelKelasInfo.classList.add('hidden'); excelKelasInfo.innerHTML = '';
+    excelHeaderInfo.style.display = 'none'; excelHeaderInfo.innerHTML = '';
+    btnImportExcel.disabled = true; modalExcel.classList.add('show');
+  }
+  function closeModalExcel() { modalExcel.classList.remove('show'); excelParsedRows = []; }
+  document.getElementById('btnOpenExcel').addEventListener('click', openModalExcel);
+  document.getElementById('modalExcelClose').addEventListener('click', closeModalExcel);
+  document.getElementById('btnBatalExcel').addEventListener('click', closeModalExcel);
+  modalExcel.addEventListener('click', e => { if (e.target === modalExcel) closeModalExcel(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalExcel.classList.contains('show')) closeModalExcel(); });
+
+  function findColumn(headerArr, candidates, exactOnly = false) {
+    for (const cand of candidates) { const idx = headerArr.findIndex(h => h === cand); if (idx !== -1) return idx; }
+    if (exactOnly) return -1;
+    for (const cand of candidates) { const idx = headerArr.findIndex(h => { const words = h.split(/\s+/); return words.includes(cand); }); if (idx !== -1) return idx; }
+    return -1;
+  }
+  function detectHeaderRow(rows) {
+    const keywords = ['nama', 'name', 'kode', 'code', 'kelas', 'class', 'rombel', 'grade'];
+    for (let i = 0; i < Math.min(rows.length, 15); i++) {
+      const row = rows[i];
+      if (!row || row.length === 0) continue;
+      const cells = row.map(c => cleanText(c).toLowerCase());
+      const nonEmpty = cells.filter(c => c !== '');
+      if (nonEmpty.length < 3) continue;
+      const matched = new Set();
+      cells.forEach(c => { keywords.forEach(k => { if (c.includes(k)) matched.add(k); }); });
+      if (matched.size >= 2) return i;
+    }
+    return 0;
+  }
+
+  excelFile.addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    if (typeof XLSX === 'undefined') { alert('Library Excel belum termuat.'); return; }
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array', cellDates: false, cellText: false, raw: true });
+      let bestRows = null, bestSheetName = '';
+      for (const name of wb.SheetNames) {
+        const ws = wb.Sheets[name]; if (!ws) continue;
+        const r = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true, blankrows: false });
+        if (!bestRows || r.length > bestRows.length) { bestRows = r; bestSheetName = name; }
+      }
+      if (!bestRows || bestRows.length < 1) { alert('File kosong.'); return; }
+      const headerRowIdx = detectHeaderRow(bestRows);
+      const headerArr = (bestRows[headerRowIdx] || []).map(c => cleanText(c).toLowerCase());
+      if (headerArr.every(h => h === '')) { alert('Header tidak ditemukan.'); return; }
+      const colNama = findColumn(headerArr, ['nama', 'name', 'nama lengkap', 'namalengkap', 'nama peserta', 'namapeserta', 'full name', 'fullname']);
+      const colKode = findColumn(headerArr, ['kode akses', 'kodeakses', 'kode', 'code', 'kode akses peserta', 'kodeaksespeserta', 'access code', 'accesscode', 'id qr', 'qr']);
+      let colKelas = findColumn(headerArr, ['kelas', 'class', 'rombel', 'grade'], true);
+      if (colKelas === -1) colKelas = findColumn(headerArr, ['nama kelas', 'namakelas', 'rombel kelas'], false);
+
+      excelHeaderInfo.style.display = 'block';
+      const headerPreview = headerArr.map((h, i) => `[${i}] "${h}"`).join(', ');
+      let statusInfo = `📄 Sheet: <b>${escapeHtml(bestSheetName)}</b> • Header baris ke-${headerRowIdx + 1}<br>📋 Kolom: `;
+      statusInfo += colNama >= 0 ? `<span style="color:var(--success);">Nama✓</span>` : `<span style="color:var(--danger);">Nama✗</span>`;
+      statusInfo += ' • ' + (colKode >= 0 ? `<span style="color:var(--success);">Kode✓</span>` : `<span style="color:var(--danger);">Kode✗</span>`);
+      statusInfo += ' • ' + (colKelas >= 0 ? `<span style="color:var(--success);">Kelas✓</span>` : `<span style="color:var(--danger);">Kelas✗</span>`);
+      statusInfo += `<br><small style="color:var(--muted);">Header: ${escapeHtml(headerPreview)}</small>`;
+      excelHeaderInfo.innerHTML = statusInfo;
+
+      if (colNama === -1 || colKode === -1 || colKelas === -1) {
+        const missing = []; if (colNama === -1) missing.push('Nama'); if (colKode === -1) missing.push('Kode Akses'); if (colKelas === -1) missing.push('Kelas');
+        alert('❌ Kolom tidak ditemukan: ' + missing.join(', ')); return;
+      }
+      const existingKodeSet = new Set(peserta.map(p => p.kode.trim().toLowerCase()));
+      const fileKodeSet = new Set();
+      let lastKelasRaw = '';
+      const parsed = [];
+      for (let i = headerRowIdx + 1; i < bestRows.length; i++) {
+        const row = bestRows[i] || [];
+        const nama = cleanText(row[colNama]);
+        const kode = cleanText(row[colKode]);
+        const kelasCellRaw = row[colKelas];
+        const kelasCell = cleanText(kelasCellRaw);
+        if (!nama && !kode && !kelasCell) continue;
+        if (!kode) continue;
+        let kelasRaw;
+        if (kelasCell !== '') { kelasRaw = kelasCell; lastKelasRaw = kelasCell; }
+        else kelasRaw = lastKelasRaw;
+        const kelas = kelasRaw ? normalizeKelasName(kelasRaw) : '';
+        let status = 'Baru', alasan = '';
+        const kodeLower = kode.toLowerCase();
+        if (!nama || !kelas) { status = 'Error'; const miss = []; if (!nama) miss.push('Nama'); if (!kelas) miss.push('Kelas'); alasan = 'Kosong: ' + miss.join(', '); }
+        else if (existingKodeSet.has(kodeLower)) { status = 'Duplikat'; alasan = 'Kode sudah ada'; }
+        else if (fileKodeSet.has(kodeLower)) { status = 'Duplikat'; alasan = 'Kode duplikat di file'; }
+        else fileKodeSet.add(kodeLower);
+        parsed.push({ nama, kode, kelas, status, alasan, baris: i + 1, kelasRawMentah: kelasCellRaw });
+      }
+      if (parsed.length === 0) { alert('Tidak ada data valid.'); return; }
+      excelParsedRows = parsed;
+      renderExcelPreview(); renderExcelKelasInfo();
+      excelPreview.classList.remove('hidden'); btnImportExcel.disabled = false;
+    } catch (err) { console.error(err); alert('Gagal baca file: ' + (err.message || err)); }
+  });
+
+  function renderExcelPreview() {
+    if (excelParsedRows.length === 0) { excelPreviewBody.innerHTML = '<tr><td colspan="7" class="empty">Tidak ada data.</td></tr>'; return; }
+    let previewCounter = _pesertaIdCounter, validIndex = 0;
+    excelPreviewBody.innerHTML = excelParsedRows.map((r, i) => {
+      let badgeCls = 'badge-tidak';
+      if (r.status === 'Baru') badgeCls = 'badge-hadir'; else if (r.status === 'Duplikat') badgeCls = 'badge-baru';
+      let idPreview = '-';
+      if (r.status === 'Baru') { validIndex++; idPreview = 'P' + String(previewCounter + validIndex).padStart(3, '0'); }
+      const valueKelas = normalizeKelasName(r.kelas);
+      const rawText = r.kelasRawMentah === undefined || r.kelasRawMentah === null || r.kelasRawMentah === '' ? '' : JSON.stringify(r.kelasRawMentah);
+      return `
+        <tr>
+          <td>${r.baris || (i + 2)}</td>
+          <td>${idPreview !== '-' ? `<span class="id-chip">${escapeHtml(idPreview)}</span>` : '-'}</td>
+          <td>${r.nama ? escapeHtml(r.nama) : '<span style="color:var(--danger);">(kosong)</span>'}</td>
+          <td>${r.kode ? `<span class="code-chip">${escapeHtml(r.kode)}</span>` : '<span style="color:var(--danger);">(kosong)</span>'}</td>
+          <td>${r.kelas ? escapeHtml(r.kelas) : '<span style="color:var(--danger);">(kosong)</span>'}${rawText ? `<br><small style="color:var(--muted);font-family:monospace;">raw: ${escapeHtml(rawText)}</small>` : ''}</td>
+          <td>${valueKelas ? `<span class="kelas-value-chip">${escapeHtml(valueKelas)}</span>` : '-'}</td>
+          <td><span class="badge ${badgeCls}">${escapeHtml(r.status)}</span>${r.alasan ? `<br><small style="color:var(--muted);">${escapeHtml(r.alasan)}</small>` : ''}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+  function renderExcelKelasInfo() {
+    const validRows = excelParsedRows.filter(r => r.status === 'Baru');
+    if (validRows.length === 0) { excelKelasInfo.classList.add('hidden'); return; }
+    const uniq = new Map();
+    validRows.forEach(r => { const nama = normalizeKelasName(r.kelas); if (!nama) return; const key = nama.toLowerCase(); if (!uniq.has(key)) uniq.set(key, nama); });
+    const kelasBaru = [], kelasLama = [];
+    uniq.forEach((namaNormal, key) => {
+      const existing = kelasList.find(k => k.toLowerCase() === key);
+      if (existing) kelasLama.push(existing); else kelasBaru.push(namaNormal);
+    });
+    let html = '';
+    if (kelasBaru.length) html += `<div class="label-row">🆕 ${kelasBaru.length} kelas baru:</div><div class="chip-row">${kelasBaru.map(n => `<span class="class-chip">${escapeHtml(n)}</span>`).join('')}</div>`;
+    if (kelasLama.length) { if (html) html += `<div style="margin-top:8px;"></div>`; html += `<div class="label-row">📚 ${kelasLama.length} kelas lama:</div><div class="chip-row">${kelasLama.map(n => `<span class="class-chip">${escapeHtml(n)}</span>`).join('')}</div>`; }
+    if (!html) excelKelasInfo.classList.add('hidden');
+    else { excelKelasInfo.innerHTML = html; excelKelasInfo.classList.remove('hidden'); }
+  }
+  formExcel.addEventListener('submit', e => {
+    e.preventDefault();
+    if (excelParsedRows.length === 0) return;
+    const validRows = excelParsedRows.filter(r => r.status === 'Baru');
+    if (validRows.length === 0) { alert('Tidak ada data valid.'); return; }
+    const kelasBaru = [], kelasLama = [], seen = new Set();
+    validRows.forEach(r => {
+      const nama = normalizeKelasName(r.kelas); if (!nama) return;
+      const key = nama.toLowerCase(); if (seen.has(key)) return; seen.add(key);
+      const existing = kelasList.find(k => k.toLowerCase() === key);
+      if (existing) kelasLama.push(existing); else kelasBaru.push(nama);
+    });
+    kelasBaru.forEach(nama => kelasList.push(nama));
+    let count = 0;
+    validRows.forEach(r => {
+      const namaKelas = ensureKelas(r.kelas); if (!namaKelas) return;
+      const newId = generatePesertaId();
+      peserta.push({ id: newId, nama: r.nama, kode: r.kode.trim(), kelas: namaKelas, kehadiran: {} });
+      count++;
+    });
+    saveData(); renderKelas(); renderPeserta(); updateAllOptions(); renderKegiatan(); renderRekapCards(); renderScanKegiatanCards();
+    closeModalExcel();
+    let msg = `✅ ${count} peserta diimport.\n`;
+    if (kelasBaru.length) msg += `🆕 Kelas baru: ${kelasBaru.join(', ')}\n`;
+    if (kelasLama.length) msg += `📚 Kelas lama: ${kelasLama.join(', ')}\n`;
+    alert(msg);
+  });
+
+  // ====== MODAL PILIH TANGGAL SCAN ======
+  const modalPilihTanggal = document.getElementById('modalPilihTanggal');
+  const modalPilihTanggalTitle = document.getElementById('modalPilihTanggalTitle');
+  const modalPilihTanggalInfo = document.getElementById('modalPilihTanggalInfo');
+  const tanggalOpsiList = document.getElementById('tanggalOpsiList');
+  const inputTanggalManual = document.getElementById('inputTanggalManual');
+
+  function openModalPilihTanggal(kegiatanId) {
+    const k = findKegiatanById(kegiatanId);
+    if (!k) { alert('Kegiatan tidak ditemukan.'); return; }
+    pilihTanggalKegiatanId = kegiatanId;
+    pilihTanggalSelected = null;
+
+    modalPilihTanggalTitle.textContent = '📅 Pilih Tanggal — ' + k.nama;
+    modalPilihTanggalInfo.innerHTML = `Kegiatan: <b>${escapeHtml(k.nama)}</b><br>Tanggal utama: <b>${escapeHtml(formatTanggal(k.tanggal))}</b>`;
+
+    renderTanggalOpsi(k);
+    inputTanggalManual.value = '';
+
+    const tglHariIni = todayISO();
+    const existingBtn = tanggalOpsiList.querySelector(`.tanggal-opsi[data-tanggal="${tglHariIni}"]`);
+    if (existingBtn) {
+      existingBtn.classList.add('selected');
+      pilihTanggalSelected = tglHariIni;
+    }
+
+    modalPilihTanggal.classList.add('show');
+  }
+  function closeModalPilihTanggal() {
+    modalPilihTanggal.classList.remove('show');
+    pilihTanggalKegiatanId = null;
+    pilihTanggalSelected = null;
+  }
+  function renderTanggalOpsi(k) {
+    let list = getTanggalList(k);
+    const tglHariIni = todayISO();
+    if (!list.includes(tglHariIni)) {
+      list = [tglHariIni, ...list];
+    } else {
+      list = [tglHariIni, ...list.filter(t => t !== tglHariIni)];
+    }
+    if (list.length === 0) {
+      tanggalOpsiList.innerHTML = '<div class="empty">Belum ada tanggal.</div>';
+      return;
+    }
+    tanggalOpsiList.innerHTML = list.map(tgl => {
+      const isUtama = tgl === k.tanggal;
+      const isToday = isHariIni(tgl);
+      const hadir = hitungHadirPadaTanggal(k, tgl);
+      const total = (k.pesertaIds || []).length;
+      let badge;
+      if (isToday) badge = `<span class="tanggal-badge hari-ini">🔥 Hari Ini</span>`;
+      else if (isUtama) badge = `<span class="tanggal-badge utama">Utama</span>`;
+      else badge = `<span class="tanggal-badge">Tambahan</span>`;
+      return `
+        <button type="button" class="tanggal-opsi ${isToday ? 'hari-ini' : ''}" data-tanggal="${tgl}">
+          <div>
+            <div class="tanggal-utama">📅 ${escapeHtml(formatTanggal(tgl))}${isToday ? ' <small style="color:var(--success-dark);font-weight:700;">(Hari Ini)</small>' : ''}</div>
+            <div class="tanggal-meta">${hadir}/${total} hadir</div>
+          </div>
+          ${badge}
+        </button>
+      `;
+    }).join('');
+
+    tanggalOpsiList.querySelectorAll('.tanggal-opsi').forEach(btn => {
+      btn.addEventListener('click', () => {
+        pilihTanggalSelected = btn.getAttribute('data-tanggal');
+        tanggalOpsiList.querySelectorAll('.tanggal-opsi').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        inputTanggalManual.value = '';
+      });
+    });
+  }
+
+  document.getElementById('modalPilihTanggalClose').addEventListener('click', closeModalPilihTanggal);
+  document.getElementById('btnBatalPilihTanggal').addEventListener('click', closeModalPilihTanggal);
+  modalPilihTanggal.addEventListener('click', e => { if (e.target === modalPilihTanggal) closeModalPilihTanggal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalPilihTanggal.classList.contains('show')) closeModalPilihTanggal(); });
+
+  inputTanggalManual.addEventListener('input', () => {
+    if (inputTanggalManual.value) {
+      pilihTanggalSelected = inputTanggalManual.value;
+      tanggalOpsiList.querySelectorAll('.tanggal-opsi').forEach(b => b.classList.remove('selected'));
+    }
+  });
+
+  document.getElementById('btnLanjutScan').addEventListener('click', () => {
+    if (!pilihTanggalKegiatanId) { alert('Kegiatan tidak valid.'); return; }
+    let tgl = pilihTanggalSelected;
+    if (!tgl) {
+      const k = findKegiatanById(pilihTanggalKegiatanId);
+      tgl = k ? k.tanggal : todayISO();
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(tgl)) { alert('Tanggal tidak valid.'); return; }
+
+    const k = findKegiatanById(pilihTanggalKegiatanId);
+    if (k && tgl !== k.tanggal) {
+      if (!Array.isArray(k.tanggalTambahan)) k.tanggalTambahan = [];
+      if (!k.tanggalTambahan.includes(tgl)) {
+        k.tanggalTambahan.push(tgl);
+        saveData();
+      }
+    }
+
+    const id = pilihTanggalKegiatanId;
+    closeModalPilihTanggal();
+    openModalScan(id, tgl);
+  });
+
+  // ====== SCAN QR ======
+  const btnStart = document.getElementById('btnStartCam');
+  const btnStop = document.getElementById('btnStopCam');
+  const btnSwitch = document.getElementById('btnSwitchCam');
+  const btnGantiTanggal = document.getElementById('btnGantiTanggal');
+  const statusEl = document.getElementById('scanStatus');
+  const overlay = document.getElementById('scanOverlay');
+  const modalScan = document.getElementById('modalScan');
+  const modalScanTitle = document.getElementById('modalScanTitle');
+  const modalScanInfo = document.getElementById('modalScanInfo');
+  const scanKegiatanCards = document.getElementById('scanKegiatanCards');
+
+  function setStatus(text, type = '') { statusEl.textContent = text; statusEl.className = 'scan-status ' + type; }
+  function showOverlay(success) {
+    overlay.textContent = success ? '✓' : '✕';
+    overlay.className = 'scan-overlay show' + (success ? '' : ' err');
+    setTimeout(() => { overlay.className = 'scan-overlay' + (success ? '' : ' err'); }, 600);
+  }
+
+  function renderScanKegiatanCards() {
+    if (!scanKegiatanCards) return;
+    if (kegiatanList.length === 0) { scanKegiatanCards.innerHTML = '<div class="empty">Belum ada kegiatan.</div>'; return; }
+    const sorted = [...kegiatanList].sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
+    scanKegiatanCards.innerHTML = sorted.map(k => `
+      <button type="button" class="kegiatan-card" data-id="${k.id}">
+        <div class="card-title">${escapeHtml(k.nama)}</div>
+      </button>
+    `).join('');
+    scanKegiatanCards.querySelectorAll('.kegiatan-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const id = toNumId(card.dataset.id);
+        if (id == null) return;
+        openModalPilihTanggal(id);
+      });
+    });
+  }
+
+  async function openModalScan(kegiatanId, tanggal) {
+    const k = findKegiatanById(kegiatanId);
+    if (!k) { alert('Kegiatan tidak ditemukan.'); return; }
+    scanKegiatanId = k.id;
+    scanTanggal = tanggal || k.tanggal;
+
+    modalScanTitle.textContent = '📷 Scan QR — ' + k.nama;
+    const wajib = (k.pesertaIds || []).length;
+    const hadir = hitungHadirPadaTanggal(k, scanTanggal);
+    modalScanInfo.innerHTML = `
+      Kegiatan: <b>${escapeHtml(k.nama)}</b><br>
+      📅 Tanggal scan: <b>${escapeHtml(formatTanggal(scanTanggal))}</b> (${isHariIni(scanTanggal) ? 'Hari Ini' : scanTanggal === k.tanggal ? 'utama' : 'tambahan'})<br>
+      Peserta wajib: <b>${wajib}</b> • Sudah hadir: <b>${hadir}</b>
+    `;
+    setStatus('Menyiapkan kamera...', 'info');
+    modalScan.classList.add('show');
+    setTimeout(() => startCamera(currentCameraIndex), 200);
+  }
+
+  async function closeModalScan() {
+    modalScan.classList.remove('show');
+    await stopCamera();
+    scanKegiatanId = null;
+    scanTanggal = null;
+    lastScannedText = '';
+    lastScannedTime = 0;
+    setStatus('', '');
+    renderScanKegiatanCards();
+  }
+  document.getElementById('modalScanClose').addEventListener('click', closeModalScan);
+  document.getElementById('btnKembaliScan').addEventListener('click', closeModalScan);
+  modalScan.addEventListener('click', e => { if (e.target === modalScan) closeModalScan(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalScan.classList.contains('show')) closeModalScan(); });
+
+  btnGantiTanggal.addEventListener('click', () => {
+    if (!scanKegiatanId) return;
+    const id = scanKegiatanId;
+    const tglSekarang = scanTanggal;
+    closeModalScan().then(() => {
+      setTimeout(() => {
+        openModalPilihTanggal(id);
+        setTimeout(() => {
+          const btn = tanggalOpsiList.querySelector(`.tanggal-opsi[data-tanggal="${tglSekarang}"]`);
+          if (btn) btn.classList.add('selected');
+          pilihTanggalSelected = tglSekarang;
+        }, 50);
+      }, 100);
+    });
+  });
+
+  async function startCamera(cameraIndex = 0) {
+    if (isScanning) return;
+    if (!scanKegiatanId) { setStatus('⚠️ Pilih kegiatan dulu.', 'err'); return; }
+    setStatus('Meminta izin kamera...', 'info');
+    btnStart.disabled = true;
+    try {
+      cameras = await Html5Qrcode.getCameras();
+      if (!cameras || cameras.length === 0) throw new Error('Tidak ada kamera.');
+      if (cameraIndex >= cameras.length) cameraIndex = 0;
+      currentCameraIndex = cameraIndex;
+      if (!html5QrCode) html5QrCode = new Html5Qrcode('reader');
+      let selectedCameraId = cameras[cameraIndex].id;
+      const backCam = cameras.find(c => /back|belakang|rear|environment/i.test(c.label));
+      if (cameraIndex === 0 && backCam && cameras.length > 1) { selectedCameraId = backCam.id; currentCameraIndex = cameras.indexOf(backCam); }
+      await html5QrCode.start(selectedCameraId, { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, onScanSuccess, () => {});
+      isScanning = true;
+      btnStart.disabled = true; btnStop.disabled = false; btnSwitch.disabled = cameras.length < 2;
+      setStatus('📷 Kamera aktif. Pindai QR.', 'info');
+    } catch (err) {
+      console.error(err);
+      btnStart.disabled = false; btnStop.disabled = true; btnSwitch.disabled = true;
+      setStatus('❌ Gagal: ' + (err.message || err), 'err');
+      isScanning = false;
+    }
+  }
+  async function stopCamera() {
+    if (!html5QrCode || !isScanning) return;
+    try { await html5QrCode.stop(); await html5QrCode.clear(); } catch (e) {}
+    isScanning = false;
+    btnStart.disabled = false; btnStop.disabled = true; btnSwitch.disabled = true;
+  }
+  btnStart.addEventListener('click', () => startCamera(currentCameraIndex));
+  btnStop.addEventListener('click', () => stopCamera());
+  btnSwitch.addEventListener('click', async () => { if (cameras.length < 2) return; await stopCamera(); startCamera((currentCameraIndex + 1) % cameras.length); });
+
+  function onScanSuccess(decodedText) {
+    const now = Date.now();
+    if (decodedText === lastScannedText && now - lastScannedTime < 2500) return;
+    lastScannedText = decodedText; lastScannedTime = now;
+    if (!scanKegiatanId || !scanTanggal) { setStatus('⚠️ Pilih kegiatan & tanggal dulu.', 'err'); showOverlay(false); beep(false); return; }
+    const kegAktif = findKegiatanById(scanKegiatanId);
+    if (!kegAktif) { setStatus('❌ Kegiatan sudah tidak ada.', 'err'); showOverlay(false); beep(false); return; }
+    const scanned = decodedText.trim();
+    const p = peserta.find(x => x.kode.trim().toLowerCase() === scanned.toLowerCase());
+    if (!p) { setStatus(`❌ Kode "${scanned}" tidak dikenali.`, 'err'); showOverlay(false); beep(false); return; }
+    if (!isPesertaWajibIkut(p.id, scanKegiatanId)) { setStatus(`❌ ${p.nama} TIDAK WAJIB ikut kegiatan ini.`, 'err'); showOverlay(false); beep(false); return; }
+
+    const key = kehadiranKey(scanKegiatanId, scanTanggal);
+    const cur = p.kehadiran[key] || {};
+    if (cur.hadir) { setStatus(`⚠️ ${p.nama} sudah hadir pada ${formatTanggal(scanTanggal)} (${cur.waktu}).`, 'err'); showOverlay(false); beep(false); return; }
+
+    const nowDate = new Date();
+    const waktu = formatWaktu(nowDate);
+    const tanggalScan = nowDate.getFullYear() + '-' + String(nowDate.getMonth()+1).padStart(2,'0') + '-' + String(nowDate.getDate()).padStart(2,'0');
+    p.kehadiran[key] = { hadir: true, waktu, tanggal: scanTanggal, tanggalScan };
+    scanLog.unshift({
+      waktu, nama: p.nama, kode: p.kode,
+      kelas: getKelasNama(p.kelas),
+      kegiatan: `${kegAktif.nama} (${formatTanggal(scanTanggal)})`,
+      tanggal: scanTanggal
+    });
+    saveData();
+
+    setStatus(`✅ [${p.id}] ${p.nama} — hadir! (${formatTanggal(scanTanggal)})`, 'ok');
+    showOverlay(true); beep(true);
+
+    const k = findKegiatanById(scanKegiatanId);
+    if (k) {
+      const wajib = (k.pesertaIds || []).length;
+      const hadir = hitungHadirPadaTanggal(k, scanTanggal);
+      modalScanInfo.innerHTML = `
+        Kegiatan: <b>${escapeHtml(k.nama)}</b><br>
+        📅 Tanggal scan: <b>${escapeHtml(formatTanggal(scanTanggal))}</b> (${isHariIni(scanTanggal) ? 'Hari Ini' : scanTanggal === k.tanggal ? 'utama' : 'tambahan'})<br>
+        Peserta wajib: <b>${wajib}</b> • Sudah hadir: <b>${hadir}</b>
+      `;
+    }
+    if (modalRekapDetail.classList.contains('show') && sameId(rekapDetailKegiatanId, scanKegiatanId)) {
+      renderRekapDetail();
+    }
+    renderRekapCards();
+    if (navigator.vibrate) navigator.vibrate(120);
+  }
+
+  let audioCtx = null;
+  function beep(success) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = 'sine'; osc.frequency.value = success ? 880 : 300;
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    } catch (e) {}
+  }
+
+  // ====== REKAP ======
+  const modalRekapDetail = document.getElementById('modalRekapDetail');
+  const rekapDetailTanggalSel = document.getElementById('rekapDetailTanggal');
+  const rdHadirList = document.getElementById('rdHadirList');
+  const rdTidakList = document.getElementById('rdTidakList');
+
+  function renderRekapCards() {
+    const wrap = document.getElementById('rekapCards');
+    if (!wrap) return;
+    if (kegiatanList.length === 0) {
+      wrap.innerHTML = '<div class="empty">Belum ada kegiatan. Tambahkan di panel Absensi.</div>';
+      return;
+    }
+    const sorted = [...kegiatanList].sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
+    wrap.innerHTML = sorted.map(k => `
+      <button type="button" class="rekap-card" data-id="${k.id}">
+        <div class="rc-title">${escapeHtml(k.nama)}</div>
+      </button>
+    `).join('');
+
+    wrap.querySelectorAll('.rekap-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const id = toNumId(card.dataset.id);
+        if (id == null) return;
+        openModalRekapDetail(id);
+      });
+    });
+  }
+
+  function openModalRekapDetail(kegiatanId) {
+    const k = findKegiatanById(kegiatanId);
+    if (!k) { alert('Kegiatan tidak ditemukan.'); return; }
+    rekapDetailKegiatanId = kegiatanId;
+
+    document.getElementById('modalRekapTitle').textContent = '📊 Rekap — ' + k.nama;
+
+    const tglHariIni = todayISO();
+    const list = getTanggalList(k);
+    const tglListFinal = list.includes(tglHariIni)
+      ? [tglHariIni, ...list.filter(t => t !== tglHariIni)]
+      : [tglHariIni, ...list];
+
+    rekapDetailTanggalSel.innerHTML = tglListFinal.map(t => {
+      const isToday = t === tglHariIni;
+      const isUtama = t === k.tanggal;
+      let suffix = '';
+      if (isToday) suffix = ' 🔥 (Hari Ini)';
+      else if (isUtama) suffix = ' (utama)';
+      return `<option value="${t}">📅 ${escapeHtml(formatTanggal(t))}${suffix}</option>`;
+    }).join('') + '<option value="all">📋 Semua Tanggal (Ringkasan)</option>';
+
+    rekapDetailTanggal = tglHariIni;
+    rekapDetailTanggalSel.value = tglHariIni;
+
+    renderRekapDetail();
+    modalRekapDetail.classList.add('show');
+  }
+
+  function closeModalRekapDetail() {
+    modalRekapDetail.classList.remove('show');
+    rekapDetailKegiatanId = null;
+    rekapDetailTanggal = 'all';
+  }
+
+  document.getElementById('modalRekapClose').addEventListener('click', closeModalRekapDetail);
+  document.getElementById('btnRekapTutup').addEventListener('click', closeModalRekapDetail);
+  modalRekapDetail.addEventListener('click', e => { if (e.target === modalRekapDetail) closeModalRekapDetail(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalRekapDetail.classList.contains('show')) closeModalRekapDetail(); });
+
+  rekapDetailTanggalSel.addEventListener('change', e => {
+    rekapDetailTanggal = e.target.value;
+    renderRekapDetail();
+  });
+
+  function getRekapDetailData() {
+    const k = findKegiatanById(rekapDetailKegiatanId);
+    if (!k) return null;
+    const wajibIds = (k.pesertaIds || []).map(id => String(id));
+    const pesertaWajib = wajibIds.map(id => findPesertaById(id)).filter(Boolean);
+
+    if (rekapDetailTanggal === 'all') {
+      const tglList = getTanggalList(k);
+      const hadir = [];
+      const tidak = [];
+      pesertaWajib.forEach(p => {
+        const hadirTgl = tglList.filter(t => (p.kehadiran[kehadiranKey(k.id, t)] || {}).hadir);
+        if (hadirTgl.length > 0) {
+          const lastKey = hadirTgl[hadirTgl.length - 1];
+          const stat = p.kehadiran[kehadiranKey(k.id, lastKey)] || {};
+          hadir.push({ p, waktu: stat.waktu || '', tanggal: lastKey, tanggalList: hadirTgl });
+        } else {
+          tidak.push({ p });
+        }
+      });
+      return { k, hadir, tidak, tglLabel: 'Semua Tanggal', tglList };
+    } else {
+      const key = kehadiranKey(k.id, rekapDetailTanggal);
+      const hadir = [];
+      const tidak = [];
+      pesertaWajib.forEach(p => {
+        const stat = p.kehadiran[key] || {};
+        if (stat.hadir) hadir.push({ p, waktu: stat.waktu || '', tanggal: rekapDetailTanggal });
+        else tidak.push({ p });
+      });
+      return { k, hadir, tidak, tglLabel: formatTanggal(rekapDetailTanggal), tglList: [rekapDetailTanggal] };
+    }
+  }
+
+  function renderRekapDetail() {
+    const data = getRekapDetailData();
+    if (!data) return;
+    const { hadir, tidak } = data;
+
+    document.getElementById('rdStatTotal').textContent = hadir.length + tidak.length;
+    document.getElementById('rdStatHadir').textContent = hadir.length;
+    document.getElementById('rdStatTidak').textContent = tidak.length;
+    document.getElementById('rdHadirCount').textContent = hadir.length;
+    document.getElementById('rdTidakCount').textContent = tidak.length;
+
+    if (hadir.length === 0) {
+      rdHadirList.innerHTML = '<div class="rekap-list-empty">Belum ada yang hadir.</div>';
+    } else {
+      rdHadirList.innerHTML = hadir.map(h => {
+        const waktuInfo = rekapDetailTanggal === 'all'
+          ? `<span class="rl-waktu">${h.tanggalList.length}x • ${escapeHtml(h.waktu)}</span>`
+          : `<span class="rl-waktu">${escapeHtml(h.waktu)}</span>`;
+        return `
+          <div class="rekap-list-item">
+            <span class="rl-nama">${escapeHtml(h.p.nama)}</span>
+            <span class="id-chip">${escapeHtml(h.p.id)}</span>
+            <span class="rl-kelas">${escapeHtml(getKelasNama(h.p.kelas))}</span>
+            ${waktuInfo}
+          </div>
+        `;
+      }).join('');
+    }
+
+    if (tidak.length === 0) {
+      rdTidakList.innerHTML = '<div class="rekap-list-empty">Semua sudah hadir 🎉</div>';
+    } else {
+      rdTidakList.innerHTML = tidak.map(t => `
+        <div class="rekap-list-item">
+          <span class="rl-nama">${escapeHtml(t.p.nama)}</span>
+          <span class="id-chip">${escapeHtml(t.p.id)}</span>
+          <span class="rl-kelas">${escapeHtml(getKelasNama(t.p.kelas))}</span>
+        </div>
+      `).join('');
+    }
+  }
+
+  function downloadRekapCSV(mode) {
+    const data = getRekapDetailData();
+    if (!data) return;
+    const { k, hadir, tidak } = data;
+    const rows = [];
+    if (mode === 'hadir') {
+      rows.push(['Status', 'ID', 'Nama', 'Kelas', 'Kode Akses', 'Tanggal Rekap', 'Waktu Hadir', 'Jumlah Hari Hadir']);
+      hadir.forEach(h => {
+        rows.push([
+          'Hadir', h.p.id, h.p.nama, getKelasNama(h.p.kelas), h.p.kode,
+          rekapDetailTanggal === 'all' ? 'Semua Tanggal' : formatTanggal(rekapDetailTanggal),
+          h.waktu || '-',
+          h.tanggalList ? h.tanggalList.length : 1
+        ]);
+      });
+    } else {
+      rows.push(['Status', 'ID', 'Nama', 'Kelas', 'Kode Akses', 'Tanggal Rekap']);
+      tidak.forEach(t => {
+        rows.push([
+          'Belum Hadir', t.p.id, t.p.nama, getKelasNama(t.p.kelas), t.p.kode,
+          rekapDetailTanggal === 'all' ? 'Semua Tanggal' : formatTanggal(rekapDetailTanggal)
+        ]);
+      });
+    }
+    if (rows.length <= 1) { alert('Tidak ada data untuk diunduh.'); return; }
+
+    const csv = '\uFEFF' + rows.map(r =>
+      r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\r\n');
+
+    const suffix = mode === 'hadir' ? 'hadir' : 'belum_hadir';
+    const tglSuffix = rekapDetailTanggal === 'all' ? 'semua_tanggal' : rekapDetailTanggal;
+    const safeNama = k.nama.replace(/[^a-zA-Z0-9]+/g, '_');
+    const filename = `rekap_${safeNama}_${suffix}_${tglSuffix}.csv`;
+    triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), filename);
+  }
+
+  document.getElementById('btnDownloadHadir').addEventListener('click', () => downloadRekapCSV('hadir'));
+  document.getElementById('btnDownloadTidak').addEventListener('click', () => downloadRekapCSV('tidak'));
+
+  // ====== UTILS ======
+  function formatWaktu(d) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  }
+  function escapeJs(str) {
+    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+  }
+
+  // ====== REFRESH ALL UI ======
+  function refreshAllUI() {
+    renderKelas();
+    renderKegiatan();
+    updateAllOptions();
+    renderPeserta();
+    renderScanKegiatanCards();
+    renderRekapCards();
+    if (modalRekapDetail.classList.contains('show') && rekapDetailKegiatanId) {
+      renderRekapDetail();
+    }
+  }
+
+  // ====== INIT ======
+  (async () => {
+    // Loading overlay per panel
+    document.querySelectorAll('.panel').forEach(p => {
+      if (!p.querySelector('.loading-overlay')) {
+        const ov = document.createElement('div');
+        ov.className = 'loading-overlay';
+        ov.innerHTML = '<div class="loading-spinner"></div><div style="margin-top:10px;color:var(--muted);font-weight:600;">Memuat data dari server...</div>';
+        p.appendChild(ov);
+      }
+    });
+
+    await loadDataFromFirebase();
+    syncPesertaIdCounter();
+    refreshAllUI();
+
+    // Hapus loading overlay
+    document.querySelectorAll('.loading-overlay').forEach(ov => ov.remove());
+  })();
+</script>
+</body>
+</html>
